@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
   type CSSProperties,
 } from "react";
-import FlapCell, { setLiteMode } from "@/components/FlapCell";
+import FlapCell from "@/components/FlapCell";
 import { FIELD_LABEL, FOCUS, Section, Segmented, Toggle } from "@/components/ui";
 import {
   DEFAULT_INTERVAL,
@@ -65,7 +65,6 @@ const LEGACY_NOTE_KEY = "splitflat:note"; // tek notlu eski sürüm
 const INTERVAL_KEY = "splitflat:interval";
 const SOUND_KEY = "splitflat:sound";
 const WALL_KEY = "splitflat:wall";
-const LITE_KEY = "splitflat:lite";
 const SHOW_KEY = "splitflat:show";
 const CITY_KEY = "splitflat:city";
 const LOCATION_KEY = "splitflat:location";
@@ -90,7 +89,6 @@ const intervalLabel = (sec: number, t: Strings) => {
 };
 // Tanıtım notları, kullanıcının seçtiği süreden bağımsız olarak hızlı döner.
 const INTRO_INTERVAL = 5;
-const INTRO_INTERVAL_LITE = 12; // zayıf cihazda pano sürekli dönmesin
 // Video: pano boşalır, yazı dönerek gelir ve bu kadar süre kaydedilir.
 const RECORD_MS = 7000;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -353,7 +351,6 @@ export default function Board() {
   const [listOpen, setListOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [wallOn, setWallOn] = useState(true);
-  const [lite, setLite] = useState(false);
   const [show, setShow] = useState<Show>(DEFAULT_SHOW);
   const [city, setCity] = useState(DEFAULT_CITY);
   const [cityDraft, setCityDraft] = useState(DEFAULT_CITY);
@@ -395,12 +392,6 @@ export default function Board() {
         if (INTERVALS.some((o) => o.sec === sec)) setIntervalSec(sec);
         if (localStorage.getItem(SOUND_KEY) === "off") setSoundOn(false);
         if (localStorage.getItem(WALL_KEY) === "off") setWallOn(false);
-        // Hafif görünüm: kayıtlı tercih, yoksa adresteki ?lite ya da az bellek
-        // (tarayıcı 1 GB ve altını bildiriyorsa) kendiliğinden açar.
-        const savedLite = localStorage.getItem(LITE_KEY);
-        const lowMemory = ((navigator as { deviceMemory?: number }).deviceMemory ?? 8) <= 1;
-        const forced = new URLSearchParams(location.search).has("lite");
-        setLite(savedLite ? savedLite === "on" : forced || lowMemory);
         const savedShow = localStorage.getItem(SHOW_KEY);
         if (savedShow) setShow({ ...DEFAULT_SHOW, ...JSON.parse(savedShow) });
         if (localStorage.getItem(LOCATION_KEY) === "city") setLocationMode("city");
@@ -442,7 +433,7 @@ export default function Board() {
   // Birden fazla içerik varsa sırayla döner. Süre, her içerik gösterildiğinde
   // baştan başlar; elle seçilen not da tam süre ekranda kalır.
   const itemCount = showingIntro ? intro.length : items.length;
-  const delaySec = showingIntro ? (lite ? INTRO_INTERVAL_LITE : INTRO_INTERVAL) : intervalSec;
+  const delaySec = showingIntro ? INTRO_INTERVAL : intervalSec;
   useEffect(() => {
     if (itemCount < 2 || recording) return;
     const t = setTimeout(() => {
@@ -516,12 +507,6 @@ export default function Board() {
       void lock?.release();
     };
   }, []);
-
-  // Hafif görünüm: stil tarafı <html data-lite> ile, animasyon tarafı motorla.
-  useEffect(() => {
-    document.documentElement.toggleAttribute("data-lite", lite);
-    setLiteMode(lite);
-  }, [lite]);
 
   /* ---------- Telefondan kontrol: sunucuyla eşitleme ---------- */
 
@@ -820,13 +805,13 @@ export default function Board() {
 
         {grid && (
           <div
-            className="board-frame relative bg-linear-to-b from-frame-hi to-frame shadow-[inset_0_2px_0_rgba(255,255,255,.13),inset_0_-2px_0_rgba(0,0,0,.7),inset_2px_0_0_rgba(255,255,255,.04),inset_-2px_0_0_rgba(0,0,0,.4),0_.12em_.2em_rgba(0,0,0,.5),0_.9em_1.4em_-.2em_rgba(0,0,0,.5),0_2.6em_3.6em_-.6em_rgba(0,0,0,.45)]"
+            className="relative bg-linear-to-b from-frame-hi to-frame shadow-[inset_0_2px_0_rgba(255,255,255,.13),inset_0_-2px_0_rgba(0,0,0,.7),inset_2px_0_0_rgba(255,255,255,.04),inset_-2px_0_0_rgba(0,0,0,.4),0_.12em_.2em_rgba(0,0,0,.5),0_.9em_1.4em_-.2em_rgba(0,0,0,.5),0_2.6em_3.6em_-.6em_rgba(0,0,0,.45)]"
             style={{ width: grid.width, height: grid.height, fontSize: grid.cw / 0.74 }}
           >
             {/* Çerçevenin içine gömülü pano yüzeyi; hücreler bunun içinde durur. */}
             <div
               aria-hidden
-              className="board-surface absolute bg-housing bg-radial-[at_72%_0%] from-housing-hi to-housing to-65% shadow-[inset_0_0_0_1px_var(--color-slot),inset_0_.5em_.9em_var(--depth),inset_0_-.15em_.4em_rgba(0,0,0,.5),0_1px_0_rgba(255,255,255,.07)]"
+              className="absolute bg-housing bg-radial-[at_72%_0%] from-housing-hi to-housing to-65% shadow-[inset_0_0_0_1px_var(--color-slot),inset_0_.5em_.9em_var(--depth),inset_0_-.15em_.4em_rgba(0,0,0,.5),0_1px_0_rgba(255,255,255,.07)]"
               style={{ inset: grid.bezel }}
             />
             <div
@@ -865,7 +850,7 @@ export default function Board() {
             {/* Panoya tek yönden düşen ışık: sağ üst aydınlık, alt kısım gölgede. */}
             <div
               aria-hidden
-              className="board-light pointer-events-none absolute z-30 bg-[radial-gradient(110%_85%_at_72%_-8%,rgba(255,255,255,.09),transparent_60%),linear-gradient(to_bottom,transparent_45%,rgba(0,0,0,.32))]"
+              className="pointer-events-none absolute z-30 bg-[radial-gradient(110%_85%_at_72%_-8%,rgba(255,255,255,.09),transparent_60%),linear-gradient(to_bottom,transparent_45%,rgba(0,0,0,.32))]"
               style={{ inset: grid.bezel }}
             />
           </div>
@@ -1242,14 +1227,6 @@ export default function Board() {
                   onChange={(next) => {
                     setWallOn(next);
                     store(WALL_KEY, next ? "on" : "off");
-                  }}
-                />
-                <Toggle
-                  label={t.lite}
-                  checked={lite}
-                  onChange={(next) => {
-                    setLite(next);
-                    store(LITE_KEY, next ? "on" : "off");
                   }}
                 />
                 <Toggle
