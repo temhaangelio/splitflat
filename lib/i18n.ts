@@ -1,7 +1,7 @@
-// Arayüz ve pano metinleri. Pano yalnızca büyük harf gösterir; pano metinleri
-// bu yüzden doğrudan büyük harfle yazılır.
+// Pano ve telefon sayfasının metinleri. Pano yalnızca büyük harf gösterir; pano
+// metinleri bu yüzden doğrudan büyük harfle yazılır.
 
-/** Panoda, PNG çıktısında ve sayfa altlarında görünen marka yazısı. */
+/** Sayfa altlarında görünen marka yazısı. */
 export const BRAND = "SPLITFLAT.SITE";
 
 export type Lang = "tr" | "en";
@@ -20,29 +20,19 @@ export const upper = (s: string, lang: Lang) => s.toLocaleUpperCase(locale(lang)
 
 export const STRINGS = {
   tr: {
-    title: "Split-Flap Ev Panosu",
-    // pano
-    // Panoda gösterilecek başka bir şey yokken sırayla dönen tanıtım notları.
-    // Satırlar elle bölünür ki kelimeler ortasından kırılmasın. En küçük pano
-    // (10 sütun, 4 satır) için ayrı, daha kısa bir takım var.
-    intro: (cols: number, rows: number): string[][] =>
-      cols < 12 || rows < 5
-        ? [
-            ["SPLITFLAT", "NOT EKLE", "ENTER'A BAS"],
-            ["HER ŞEY", "AYARLARDA", "DİŞLİYE", "DOKUNUN"],
-            ["SAAT VE", "HAVA DURUMU", "EKLEYİN"],
-            ["NOTLARINIZ", "SIRAYLA", "DÖNER"],
-            ["PANOYU PNG", "OLARAK", "KAYDEDİN"],
-            ["TAM EKRAN", "YAPIP", "DUVARA ASIN"],
-          ]
-        : [
-            ["SPLITFLAT'E", "HOŞ GELDİNİZ", "", "NOT EKLE VE", "ENTER'A BAS"],
-            ["AYARLAR İÇİN", "DİŞLİ", "SİMGESİNE", "DOKUNUN"],
-            ["SAAT, TARİH", "VE HAVA", "DURUMUNU", "AYARLARDAN", "AÇIN"],
-            ["BİRDEN ÇOK", "NOT EKLEYİN", "", "SIRAYLA", "DÖNSÜNLER"],
-            ["PANOYU PNG", "OLARAK", "KAYDEDİN"],
-            ["TAM EKRAN", "YAPIN VE", "DUVARA ASIN"],
-          ],
+    title: "Splitflat",
+
+    /* ----- pano ----- */
+    board: "Split-flap pano",
+    // Gösterilecek başka bir şey yokken sırayla dönen tanıtım notları. Satırlar
+    // elle bölünür ki kelimeler ortasından kırılmasın (pano 12 sütun, 5 satır).
+    intro: [
+      ["SPLITFLAT'E", "HOŞ GELDİNİZ"],
+      ["TELEFONDAN", "NOT GÖNDERİN"],
+      ["SAAT, TARİH", "VE HAVA", "DURUMUNU", "TELEFONDAN", "AÇIN"],
+      ["GERİ SAYIM", "BAŞLATIN"],
+      ["BİRDEN ÇOK", "NOT EKLEYİN", "", "SIRAYLA", "DÖNSÜNLER"],
+    ],
     days: ["PAZAR", "PAZARTESİ", "SALI", "ÇARŞAMBA", "PERŞEMBE", "CUMA", "CUMARTESİ"],
     months: [
       "OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
@@ -55,102 +45,74 @@ export const STRINGS = {
     dayOne: "GÜN",
     dayMany: "GÜN",
     countdownDone: "ZAMAN DOLDU",
-    seconds: "SN",
-    minutes: "DK",
-    // şerit ve not listesi
-    board: "Split-flap pano",
-    newNote: "Yeni not",
-    notePlaceholder: "Not ekle, Enter'a bas…",
-    clearDraft: "Yazılanı temizle",
-    addNote: "Notu ekle",
-    addNoteTitle: "Notu ekle (Enter)",
-    noteList: "Not listesi",
-    deleteNote: "Notu sil",
-    notesHeading: "NOTLAR",
-    rotatesEvery: (interval: string) => `${interval} ARAYLA DÖNER`,
-    noNotes: "Henüz not yok. Aşağıya yazıp Enter'a bas.",
-    settings: "Ayarlar",
-    fullscreen: "Tam ekran",
-    exitFullscreen: "Tam ekrandan çık",
-    // ayarlar
-    settingsTitle: "AYARLAR",
-    about: "Hakkında",
-    close: "Kapat",
-    language: "DİL",
-    sound: "SES",
-    wall: "DUVAR ARKA PLANI",
-    cellCount: "HÜCRE SAYISI",
-    cellsAria: (cols: number, rows: number) => `${cols} sütun, ${rows} satır`,
-    showOnBoard: "PANODA GÖSTER",
-    boardSection: "PANO",
-    notes: "NOTLAR",
-    clock: "SAAT VE TARİH",
-    showSeconds: "SANİYE",
-    weather: "HAVA DURUMU",
-    countdown: "GERİ SAYIM",
-    countdownTitle: "Başlık",
-    countdownDate: "Hedef tarih ve saat",
-    location: "Konum",
-    myLocation: "KONUMUM",
-    chooseCity: "ŞEHİR SEÇ",
-    city: "Şehir",
-    save: "KAYDET",
-    locationError: "Konum alınamadı. Tarayıcıda konum izni ver ya da şehir seç.",
-    cityError: "Hava durumu alınamadı. Şehir adını kontrol et.",
-    interval: "GEÇİŞ SÜRESİ",
-    // telefondan kontrol
-    remoteSection: "TELEFONDAN KONTROL",
-    remoteToggle: "TELEFONDAN KONTROL",
-    remoteHelp:
-      "Telefonunuzla kodu okutun, panoya oradan not gönderin. Kodu ya da bağlantıyı bilen herkes bu panoya yazabilir; yalnızca güvendiğiniz kişilerle paylaşın.",
-    remotePair: "TELEFON EŞLEŞTİR",
-    remoteHide: "KODU GİZLE",
-    remoteCopy: "BAĞLANTIYI KOPYALA",
-    remoteCopied: "KOPYALANDI",
-    remoteRotate: "BAĞLANTIYI YENİLE",
-    remoteRotateConfirm:
-      "Bağlantı yenilenecek ve eski kod geçersiz olacak. Eşleşmiş telefonların yeniden eşleştirilmesi gerekir. Devam edilsin mi?",
-    remoteQrAlt: "Telefon eşleştirme kodu",
-    remoteUnavailable: "Bu özellik sunucuda henüz ayarlanmamış.",
-    remoteError: "Sunucuya ulaşılamadı. Pano çalışmaya devam ediyor; bağlantı gelince eşitlenecek.",
-    remoteLost: "Bu pano sunucuda bulunamadı. Özelliği kapatıp yeniden açın.",
-    // telefon sayfası
+
+    /* ----- panodaki eşleştirme ekranı ----- */
+    pairQrAlt: "Telefon eşleştirme kodu",
+    pairTitle: "Telefonunuzla okutun",
+    pairText:
+      "Kameranızı koda tutun. Açılan sayfadan panoya not gönderir, saati, hava durumunu ve geri sayımı açarsınız.",
+    pairOffline: "Sunucuya ulaşılamıyor. Bağlantı gelince bu kodla eşleşebilirsiniz.",
+    pairUnavailableTitle: "Telefon bağlantısı hazır değil",
+    pairUnavailable:
+      "Bu sitede telefon bağlantısı için gereken sunucu deposu henüz kurulmamış. Kurulunca burada bir eşleştirme kodu görünecek.",
+
+    /* ----- telefon sayfası ----- */
     phoneTitle: "Pano kumandası",
-    phoneNotPaired:
-      "Bu telefon bir panoyla eşleşmemiş. Panoda Ayarlar → Telefondan kontrol → Telefon eşleştir deyip çıkan kodu okutun.",
-    phoneGone:
-      "Bu pano artık yok ya da bağlantısı yenilenmiş. Panodaki yeni kodu okutun.",
-    phoneOffline: "Sunucuya ulaşılamadı. Yeniden deneniyor…",
+    about: "Hakkında",
     phoneLoading: "Pano yükleniyor…",
+    phoneNotPaired:
+      "Bu telefon bir panoyla eşleşmemiş. Panonun ekranındaki kodu telefonunuzun kamerasıyla okutun.",
+    phoneGone:
+      "Bu pano artık yok ya da eşleşmesi sıfırlanmış. Panonun ekranındaki yeni kodu okutun.",
+    phoneOffline: "Sunucuya ulaşılamadı. Yeniden deneniyor…",
+    phoneSent: "Panoya gönderildi",
+    newNote: "Yeni not",
     phoneAdd: "EKLE",
     phoneTooLong: "Bu not panoya sığmıyor.",
     phoneFull: "Liste dolu. Yeni not için birini silin.",
-    phoneSent: "Panoya gönderildi",
+    notesHeading: "NOTLAR",
+    noNotes: "Henüz not yok. Yukarıya yazıp Ekle'ye basın.",
+    deleteNote: "Notu sil",
+
+    showOnBoard: "PANODA GÖSTER",
+    notes: "NOTLAR",
+    clock: "SAAT VE TARİH",
+    showSeconds: "SANİYE",
+    countdown: "GERİ SAYIM",
+    countdownTitle: "Başlık",
+    countdownDate: "Hedef tarih ve saat",
+    weather: "HAVA DURUMU",
+    city: "Şehir",
+    interval: "GEÇİŞ SÜRESİ",
+    seconds: "SN",
+    minutes: "DK",
+
+    general: "GENEL",
+    sound: "KART SESİ",
+    boardLanguage: "PANO DİLİ",
+
+    pairing: "EŞLEŞME",
+    shareHelp:
+      "Başka bir telefonu eklemek için bu bağlantıyı gönderin. Bağlantıyı bilen herkes panoya yazabilir; yalnızca güvendiğiniz kişilerle paylaşın.",
+    shareLink: "BAĞLANTIYI KOPYALA",
+    shareCopied: "KOPYALANDI",
+    resetPairing: "EŞLEŞMEYİ SIFIRLA",
+    resetConfirm:
+      "Tüm telefonların eşleşmesi kaldırılacak ve panoda yeni bir kod görünecek. Notlarınız panoda kalır. Devam edilsin mi?",
     phoneForget: "BU TELEFONU UNUT",
     phoneForgetConfirm: "Bu telefonun panoyla eşleşmesi kaldırılsın mı?",
-    downloadPng: "PNG olarak kaydet",
-    recordVideo: "Video kaydet",
   },
   en: {
-    title: "Split-Flap Home Board",
-    intro: (cols: number, rows: number): string[][] =>
-      cols < 12 || rows < 5
-        ? [
-            ["SPLITFLAT", "ADD A NOTE", "PRESS ENTER"],
-            ["TAP THE", "GEAR FOR", "SETTINGS"],
-            ["ADD TIME", "AND", "WEATHER"],
-            ["YOUR NOTES", "ROTATE"],
-            ["SAVE THE", "BOARD AS", "A PNG"],
-            ["GO FULL", "SCREEN AND", "HANG IT UP"],
-          ]
-        : [
-            ["WELCOME TO", "SPLITFLAT", "", "ADD A NOTE", "PRESS ENTER"],
-            ["TAP THE GEAR", "TO OPEN", "SETTINGS"],
-            ["TURN ON TIME", "DATE AND", "WEATHER IN", "SETTINGS"],
-            ["ADD SEVERAL", "NOTES AND", "THEY ROTATE"],
-            ["SAVE THE", "BOARD AS", "A PNG"],
-            ["GO FULL", "SCREEN AND", "HANG IT UP"],
-          ],
+    title: "Splitflat",
+
+    board: "Split-flap board",
+    intro: [
+      ["WELCOME TO", "SPLITFLAT"],
+      ["SEND NOTES", "FROM YOUR", "PHONE"],
+      ["TURN ON TIME", "DATE AND", "WEATHER", "FROM YOUR", "PHONE"],
+      ["START A", "COUNTDOWN"],
+      ["ADD SEVERAL", "NOTES AND", "THEY ROTATE"],
+    ],
     days: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"],
     months: [
       "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
@@ -163,76 +125,60 @@ export const STRINGS = {
     dayOne: "DAY",
     dayMany: "DAYS",
     countdownDone: "TIME IS UP",
-    seconds: "SEC",
-    minutes: "MIN",
-    board: "Split-flap board",
-    newNote: "New note",
-    notePlaceholder: "Add a note, press Enter…",
-    clearDraft: "Clear text",
-    addNote: "Add note",
-    addNoteTitle: "Add note (Enter)",
-    noteList: "Note list",
-    deleteNote: "Delete note",
-    notesHeading: "NOTES",
-    rotatesEvery: (interval: string) => `ROTATES EVERY ${interval}`,
-    noNotes: "No notes yet. Type one below and press Enter.",
-    settings: "Settings",
-    fullscreen: "Full screen",
-    exitFullscreen: "Exit full screen",
-    settingsTitle: "SETTINGS",
-    about: "About",
-    close: "Close",
-    language: "LANGUAGE",
-    sound: "SOUND",
-    wall: "WALL BACKGROUND",
-    cellCount: "BOARD SIZE",
-    cellsAria: (cols: number, rows: number) => `${cols} columns, ${rows} rows`,
-    showOnBoard: "SHOW ON BOARD",
-    boardSection: "BOARD",
-    notes: "NOTES",
-    clock: "TIME AND DATE",
-    showSeconds: "SECONDS",
-    weather: "WEATHER",
-    countdown: "COUNTDOWN",
-    countdownTitle: "Title",
-    countdownDate: "Target date and time",
-    location: "Location",
-    myLocation: "MY LOCATION",
-    chooseCity: "CHOOSE CITY",
-    city: "City",
-    save: "SAVE",
-    locationError: "Couldn't get your location. Allow location access or choose a city.",
-    cityError: "Couldn't get the weather. Check the city name.",
-    interval: "ROTATION INTERVAL",
-    remoteSection: "PHONE CONTROL",
-    remoteToggle: "PHONE CONTROL",
-    remoteHelp:
-      "Scan the code with your phone and send notes to the board from there. Anyone with the code or link can write to this board; share it only with people you trust.",
-    remotePair: "PAIR A PHONE",
-    remoteHide: "HIDE CODE",
-    remoteCopy: "COPY LINK",
-    remoteCopied: "COPIED",
-    remoteRotate: "RESET LINK",
-    remoteRotateConfirm:
-      "The link will be reset and the old code will stop working. Paired phones will need to be paired again. Continue?",
-    remoteQrAlt: "Phone pairing code",
-    remoteUnavailable: "This feature isn't set up on the server yet.",
-    remoteError: "Couldn't reach the server. The board keeps working and will sync when it's back.",
-    remoteLost: "This board wasn't found on the server. Turn the feature off and on again.",
+
+    pairQrAlt: "Phone pairing code",
+    pairTitle: "Scan with your phone",
+    pairText:
+      "Point your camera at the code. From the page that opens you can send notes to the board and turn on the time, weather and countdown.",
+    pairOffline: "Can't reach the server. You can pair with this code once the connection is back.",
+    pairUnavailableTitle: "Phone link isn't ready",
+    pairUnavailable:
+      "The server storage needed for the phone link hasn't been set up on this site yet. A pairing code will appear here once it is.",
+
     phoneTitle: "Board remote",
-    phoneNotPaired:
-      "This phone isn't paired with a board. On the board, open Settings → Phone control → Pair a phone and scan the code.",
-    phoneGone: "This board no longer exists or its link was reset. Scan the new code on the board.",
-    phoneOffline: "Couldn't reach the server. Retrying…",
+    about: "About",
     phoneLoading: "Loading the board…",
+    phoneNotPaired:
+      "This phone isn't paired with a board. Scan the code on the board's screen with your phone's camera.",
+    phoneGone:
+      "This board no longer exists or its pairing was reset. Scan the new code on the board's screen.",
+    phoneOffline: "Couldn't reach the server. Retrying…",
+    phoneSent: "Sent to the board",
+    newNote: "New note",
     phoneAdd: "ADD",
     phoneTooLong: "This note doesn't fit on the board.",
     phoneFull: "The list is full. Delete a note to add a new one.",
-    phoneSent: "Sent to the board",
+    notesHeading: "NOTES",
+    noNotes: "No notes yet. Type one above and press Add.",
+    deleteNote: "Delete note",
+
+    showOnBoard: "SHOW ON BOARD",
+    notes: "NOTES",
+    clock: "TIME AND DATE",
+    showSeconds: "SECONDS",
+    countdown: "COUNTDOWN",
+    countdownTitle: "Title",
+    countdownDate: "Target date and time",
+    weather: "WEATHER",
+    city: "City",
+    interval: "ROTATION INTERVAL",
+    seconds: "SEC",
+    minutes: "MIN",
+
+    general: "GENERAL",
+    sound: "CARD SOUND",
+    boardLanguage: "BOARD LANGUAGE",
+
+    pairing: "PAIRING",
+    shareHelp:
+      "To add another phone, send it this link. Anyone with the link can write to the board; share it only with people you trust.",
+    shareLink: "COPY LINK",
+    shareCopied: "COPIED",
+    resetPairing: "RESET PAIRING",
+    resetConfirm:
+      "Every phone will be unpaired and the board will show a new code. Your notes stay on the board. Continue?",
     phoneForget: "FORGET THIS PHONE",
     phoneForgetConfirm: "Unpair this phone from the board?",
-    downloadPng: "Save as PNG",
-    recordVideo: "Record video",
   },
 } satisfies Record<Lang, unknown>;
 

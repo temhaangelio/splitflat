@@ -7,8 +7,6 @@
   --color-housing: #0b0b0b;
   --color-housing-hi: #1b1b1b;
   --color-edge: #2c2c2c;
-  --color-frame: #121212;
-  --color-frame-hi: #232323;
   --color-flap: #1a1a1a;
   --color-flap-hi: #212121;
   --color-flap-lo: #151515;
@@ -20,28 +18,10 @@
   --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-:root {
-  --depth: rgba(0, 0, 0, 0.85); /* pano yüzeyinin iç gölgesi */
-}
-
 
 body {
-  background-color: #cbcbcb;
+  background-color: var(--color-housing);
   color: var(--color-ink);
-}
-
-/*
- * Duvar: açık gri boyalı sıva. Üstten gelen yumuşak ışık, kenarlara doğru
- * kararma ve iki katman gürültü (ince sıva pütürü + büyük ölçekli dalgalanma).
- * Renk yok; paletin geri kalanı gibi tamamen gri tonlar.
- */
-.wall {
-  background-color: #cbcbcb;
-  background-image:
-    radial-gradient(ellipse 85% 65% at 50% 30%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 72%),
-    radial-gradient(ellipse 120% 120% at 50% 45%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.32) 100%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.2'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)' opacity='.16'/%3E%3C/svg%3E");
 }
 
 /* Tüm sahnenin üzerine binen ince gren. Kontroller bunun üstünde kalır. */
@@ -97,4 +77,44 @@ dialog[open]::backdrop {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-edge) transparent;
+}
+
+/*
+ * Hafif görünüm (<html data-lite>): zayıf cihazlarda ekranı çizmeyi pahalı
+ * yapan her şeyi kapatır. Pano aynı pano olarak kalır; gren, ışık katmanı,
+ * bulanıklık ve gölgeler gider.
+ */
+[data-lite] .grain,
+[data-lite] .board-light {
+  display: none;
+}
+[data-lite] .board-surface {
+  background-image: none !important;
+}
+[data-lite] [data-half] {
+  box-shadow: none !important;
+  /* Bu özellik her yarımı ayrı bir çizim katmanına çıkarır: 60 hücrede 240
+     katman. Zayıf cihazda belleği ve çizimi en çok yoran şey budur. */
+  backface-visibility: visible !important;
+}
+/* Düşen kart yarımları hafif görünümde hiç kullanılmaz. */
+[data-lite] [data-half]:nth-child(n + 3) {
+  display: none !important;
+}
+[data-lite] .flap-cell {
+  perspective: none !important;
+}
+/* Geçiş efektleri de kapalı: kontroller ve pencere anında görünüp kaybolur. */
+[data-lite] *,
+[data-lite] dialog::backdrop {
+  transition: none !important;
+  animation: none !important;
+}
+[data-lite] * {
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+/* Ayarlar penceresinin arkasındaki bulanıklık da; ::backdrop yukarıdaki * ile eşleşmez. */
+[data-lite] dialog::backdrop {
+  backdrop-filter: none !important;
 }

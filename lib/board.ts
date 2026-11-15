@@ -82,10 +82,14 @@ export const fits = (text: string, size: SizeId) => {
 
 /* ---------- Telefonla paylaşılan durum ---------- */
 
+export const CITY_LIMIT = 40;
+export const DEFAULT_CITY = "İstanbul";
+export type BoardLang = "tr" | "en";
+
 /**
- * Duvardaki pano ile telefon arasında eşitlenen her şey. Cihaza özgü ayarlar
- * (dil, ses, duvar arka planı, hava durumu konumu) burada yoktur; `size` yalnızca
- * telefonun notu doğru sınırlayabilmesi için paylaşılır.
+ * Panonun tüm durumu. Ekran yalnızca gösterir; bunların hepsi telefondan
+ * ayarlanır ve sunucu üzerinden panoya ulaşır. `size` şimdilik sabittir,
+ * telefonun notu doğru sınırlayabilmesi için taşınır.
  */
 export type Shared = {
   notes: string[];
@@ -93,30 +97,20 @@ export type Shared = {
   intervalSec: number;
   countdown: Countdown | null;
   size: SizeId;
+  city: string; // hava durumu için
+  lang: BoardLang; // panodaki gün, ay ve hava durumu metinlerinin dili
+  sound: boolean;
 };
 
-/**
- * Paylaşılan durumu her zaman aynı alan sırasıyla kurar. Böylece iki durum
- * JSON metni olarak karşılaştırılabilir (parseShared de aynı sırayı üretir).
- */
-export const toShared = (
-  notes: string[],
-  show: Show,
-  intervalSec: number,
-  countdown: Countdown | null,
-  size: SizeId,
-): Shared => ({
-  notes,
-  show: {
-    notes: show.notes,
-    clock: show.clock,
-    seconds: show.seconds,
-    weather: show.weather,
-    countdown: show.countdown,
-  },
-  intervalSec,
-  countdown: countdown && { title: countdown.title, target: countdown.target },
-  size,
+export const defaultShared = (lang: BoardLang): Shared => ({
+  notes: [],
+  show: DEFAULT_SHOW,
+  intervalSec: DEFAULT_INTERVAL,
+  countdown: null,
+  size: DEFAULT_SIZE,
+  city: DEFAULT_CITY,
+  lang,
+  sound: true,
 });
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
@@ -160,11 +154,22 @@ export function parseShared(input: unknown): Shared | null {
     countdown = { title: c.title, target: c.target };
   }
 
+  // Sonradan eklenen alanlar: eski kayıtlarda yoksa varsayılan kullanılır.
+  const city = o.city === undefined ? DEFAULT_CITY : o.city;
+  if (typeof city !== "string" || !city.trim() || city.length > CITY_LIMIT) return null;
+  const lang = o.lang === undefined ? "tr" : o.lang;
+  if (lang !== "tr" && lang !== "en") return null;
+  const sound = o.sound === undefined ? true : o.sound;
+  if (!isBool(sound)) return null;
+
   return {
     notes,
     show: show as Show,
     intervalSec: o.intervalSec as number,
     countdown,
     size: o.size as SizeId,
+    city,
+    lang,
+    sound,
   };
 }

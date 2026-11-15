@@ -40,6 +40,7 @@ export const CHARS = [
   "?'°",
 ].join("");
 // Tek bir yaprak düşüşü. Düşüşün gözle seçilebilmesi için yeterince yavaş.
+const PLAIN = [...CHARS].filter((ch) => ch !== " " && !COLOR_CARDS[ch]);
 const FLIP_MS = 150;
 // Hedefe varan son kartın durdurucuya çarpıp sekmesi. Aradaki kartlar
 // beklemez: gerçek tamburda sıradaki kart, önceki daha sekerken düşer.
@@ -50,6 +51,18 @@ const BOUNCE_MS = 260;
 const FAST_FROM = 6;
 const FAST_MS = 60;
 const FAST_STEP = 4;
+
+// Hafif görünüm: zayıf cihazlar (ör. Raspberry Pi Zero 2 W) için. Açıkken kart
+// çevirme animasyonu hiç çalışmaz: değişen hücre birkaç rastgele karakterden
+// geçip hedefi doğrudan yazar, harfi değişmeyen hücre hiç dokunulmaz. Tarayıcıya
+// düşen iş, hücre başına birkaç metin değişikliğinden ibarettir. Tüm hücreler
+// için ortak olduğundan modül düzeyinde tutulur.
+let lite = false;
+export const setLiteMode = (on: boolean) => {
+  lite = on;
+};
+const LITE_STEP_MS = 90; // ara karakterlerin ekranda kalma süresi
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
  * Animasyon motoru React'in dışında, doğrudan DOM üzerinde çalışır: bir harf
@@ -94,13 +107,19 @@ class FlapEngine {
       return;
     }
     this.snap = false; // önceki dönüşten kalmış bir kesme isteği yeni dönüşü kesmesin
-    if (instant && !kicked) {
+    if ((instant || lite) && !kicked) {
       // Saniyeli saat gibi sık güncellenen içerikte yaprak çevirmeden yaz.
       if (this.idx === this.target) return;
       this.idx = this.target;
       this.face = CHARS[this.idx];
       this.show(0, this.face);
       this.show(1, this.face);
+      return;
+    }
+    if (kicked && lite && !this.reduced) {
+      if (this.idx === this.target) return;
+      this.running = true;
+      this.timer = setTimeout(() => void this.runLite(), delay);
       return;
     }
     if (kicked && !this.reduced) {
@@ -161,6 +180,24 @@ class FlapEngine {
       // Hücre animasyon ortasında kaldırıldıysa sessizce bırak.
     }
     this.running = false;
+  }
+
+  /** Hafif görünümdeki geçiş: animasyon yok, birkaç ara karakter ve hedef. */
+  private async runLite() {
+    const steps = 2 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < steps && this.alive; k++) {
+      const ch = PLAIN[Math.floor(Math.random() * PLAIN.length)];
+      this.show(0, ch);
+      this.show(1, ch);
+      await sleep(LITE_STEP_MS);
+    }
+    // Beklerken hedef değişmiş olabilir; her zaman en güncel hedef yazılır.
+    this.idx = this.target;
+    this.face = CHARS[this.idx];
+    this.show(0, this.face);
+    this.show(1, this.face);
+    this.running = false;
+    tick();
   }
 
   /**
@@ -245,7 +282,7 @@ const BOT =
   "bottom-0 origin-top bg-[linear-gradient(to_bottom,#080808_0,var(--color-flap-lo)_22%,var(--color-flap)_88%,#101010_100%)]";
 // before = menteşe hizasındaki yan çentikler, after = menteşe çizgisi.
 const CELL = [
-  "relative h-(--ch) w-(--cw) shrink-0 font-bold text-ink shadow-[0_0_0_.045em_var(--color-slot),0_.075em_0_.045em_rgba(255,255,255,.05)] [perspective:3.2em]",
+  "flap-cell relative h-(--ch) w-(--cw) shrink-0 font-bold text-ink shadow-[0_0_0_.045em_var(--color-slot),0_.075em_0_.045em_rgba(255,255,255,.05)] [perspective:3.2em]",
   "before:absolute before:inset-x-0 before:top-[calc(50%-.07em)] before:z-10 before:h-[.14em] before:content-['']",
   "before:bg-[linear-gradient(90deg,var(--color-housing)_0_.07em,transparent_.07em_calc(100%-.07em),var(--color-housing)_calc(100%-.07em))]",
   "after:absolute after:inset-x-0 after:top-[calc(50%-.5px)] after:z-10 after:h-px after:bg-hinge after:content-['']",
