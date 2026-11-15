@@ -55,6 +55,10 @@ const POLL_MS = 7000;
 const PAIR_POLL_FAST_MS = 4000;
 const PAIR_POLL_SLOW_MS = 20_000;
 const PAIR_FAST_FOR_MS = 3 * 60_000;
+// Eşleşmiş pano da kodu kısa süre gösterir: her açılışta ve ekrana dokununca.
+// Böylece eşleşmesini kaybeden bir telefon, klavye gerekmeden yeniden eşleşir.
+const PEEK_ON_BOOT_MS = 20_000;
+const PEEK_ON_TOUCH_MS = 30_000;
 
 const WEATHER_REFRESH_MS = 15 * 60 * 1000;
 // Tanıtım notları, seçilen süreden bağımsız olarak hızlı döner.
@@ -253,6 +257,8 @@ export default function Board() {
   const [pending, setPending] = useState<Pair | null>(null);
   const [link, setLink] = useState<"checking" | "ready" | "unavailable" | "offline">("checking");
   const [qr, setQr] = useState<string | null>(null);
+  // Eşleşmiş panonun kodu şu kadar süre daha ekranda (0: gizli).
+  const [peekMs, setPeekMs] = useState(0);
   const version = useRef(0); // sunucudaki son bilinen sürüm
 
   const lang: Lang = data?.lang ?? "tr";
@@ -272,8 +278,10 @@ export default function Board() {
       setSpin((n) => n + 1);
 
       const paired = readPair(REMOTE_KEY);
-      if (paired) setRemote(paired);
-      else {
+      if (paired) {
+        setRemote(paired);
+        setPeekMs(PEEK_ON_BOOT_MS);
+      } else {
         const waiting = readPair(PENDING_KEY) ?? newPair();
         store(PENDING_KEY, JSON.stringify(waiting));
         setPending(waiting);
@@ -349,6 +357,7 @@ export default function Board() {
     store(PENDING_KEY, null);
     setPending(null);
     setQr(null);
+    setPeekMs(0);
     setRemote(pair);
     apply(next, nextV);
   });
@@ -383,13 +392,18 @@ export default function Board() {
     };
   }, [pending]);
 
+  // Ekranda kodu gösterilecek pano: eşleşme bekleyen, ya da eşleşmiş olup
+  // kodu kısa süreliğine açılmış olan.
+  const peeking = remote !== null && peekMs > 0;
+  const codePair = pending ?? (peeking ? remote : null);
+
   // Eşleştirme kodu; kütüphane yalnızca gerektiğinde yüklenir.
   useEffect(() => {
-    if (!pending) return;
+    if (!codePair) return;
     let alive = true;
     void import("qrcode")
       .then((QR) =>
-        QR.toDataURL(pairUrl(pending), { margin: 2, width: 720, errorCorrectionLevel: "M" }),
+        QR.toDataURL(pairUrl(codePair), { margin: 2, width: 720, errorCorrectionLevel: "M" }),
       )
       .then((url) => {
         if (alive) setQr(url);
@@ -397,7 +411,14 @@ export default function Board() {
     return () => {
       alive = false;
     };
-  }, [pending]);
+  }, [codePair]);
+
+  // Eşleşmiş panonun kodu süresi dolunca gizlenir.
+  useEffect(() => {
+    if (peekMs === 0) return;
+    const timer = setTimeout(() => setPeekMs(0), peekMs);
+    return () => clearTimeout(timer);
+  }, [peekMs]);
 
   // Panoda gösterilecekler: açık olan saat, hava durumu ve geri sayım, ardından notlar.
   const items: Item[] = [];
@@ -492,9 +513,11 @@ export default function Board() {
     return () => events.forEach((e) => window.removeEventListener(e, unlock));
   }, [soundOn]);
 
-  // Ekranda düğme yok: panoya dokunmak tam ekrana geçirir.
+  // Ekranda düğme yok: panoya dokunmak tam ekrana geçirir ve eşleştirme
+  // kodunu kısa süreliğine gösterir.
   useEffect(() => {
     const enter = () => {
+      setPeekMs(PEEK_ON_TOUCH_MS);
       if (!document.fullscreenElement) {
         void document.documentElement.requestFullscreen?.().catch(() => {});
       }
@@ -571,11 +594,11 @@ export default function Board() {
       {/* Film greni: düz dijital yüzeyleri fotoğraf gibi gösterir. */}
       <div aria-hidden className="grain" />
 
-      {/* Eşleşmiş telefon yokken: eşleştirme kodu. */}
-      {pending && link !== "checking" && (
+      {/* Eşleştirme kodu: eşleşmiş telefon yokken sürekli, varken kısa süreliğine. */}
+      {((pending && link !== "checking") || peeking) && (
         <div className="absolute inset-0 z-40 grid place-items-center bg-black/85 p-[4vmin]">
           <div className="flex flex-wrap items-center justify-center gap-[6vmin]">
-            {link !== "unavailable" && (
+            {(peeking || link !== "unavailable") && (
               <div className="bg-white p-[1.2vmin]">
                 {qr ? (
                   // eslint-disable-next-line @next/next/no-img-element -- tarayıcıda üretilen veri adresi
@@ -590,14 +613,20 @@ export default function Board() {
                 SPLITFLAT
               </p>
               <h1 className="text-[clamp(1.5rem,4.4vmin,2.8rem)] leading-tight font-bold tracking-wide">
-                {link === "unavailable" ? t.pairUnavailableTitle : t.pairTitle}
+                {peeking
+                  ? t.pairMoreTitle
+                  : link === "unavailable"
+                    ? t.pairUnavailableTitle
+                    : t.pairTitle}
               </h1>
               <p className="text-[clamp(.95rem,2.2vmin,1.3rem)] leading-relaxed text-muted">
-                {link === "unavailable"
-                  ? t.pairUnavailable
-                  : link === "offline"
-                    ? t.pairOffline
-                    : t.pairText}
+                {peeking
+                  ? t.pairMoreText
+                  : link === "unavailable"
+                    ? t.pairUnavailable
+                    : link === "offline"
+                      ? t.pairOffline
+                      : t.pairText}
               </p>
             </div>
           </div>

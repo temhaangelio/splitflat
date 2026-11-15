@@ -52,6 +52,10 @@ export const STRINGS = {
     pairText:
       "Kameranızı koda tutun. Açılan sayfadan panoya not gönderir, saati, hava durumunu ve geri sayımı açarsınız.",
     pairOffline: "Sunucuya ulaşılamıyor. Bağlantı gelince bu kodla eşleşebilirsiniz.",
+    // eşleşmiş panoda, açılışta ya da dokununca kısa süre görünen kod
+    pairMoreTitle: "Telefon eklemek için okutun",
+    pairMoreText:
+      "Bu kod birazdan kaybolur. Eşleşmiş telefonlar etkilenmez; yeniden görmek için panoyu kapatıp açın ya da ekrana dokunun.",
     pairUnavailableTitle: "Telefon bağlantısı hazır değil",
     pairUnavailable:
       "Bu sitede telefon bağlantısı için gereken sunucu deposu henüz kurulmamış. Kurulunca burada bir eşleştirme kodu görünecek.",
@@ -131,6 +135,9 @@ export const STRINGS = {
     pairText:
       "Point your camera at the code. From the page that opens you can send notes to the board and turn on the time, weather and countdown.",
     pairOffline: "Can't reach the server. You can pair with this code once the connection is back.",
+    pairMoreTitle: "Scan to add a phone",
+    pairMoreText:
+      "This code disappears shortly. Paired phones aren't affected; to see it again, restart the board or touch the screen.",
     pairUnavailableTitle: "Phone link isn't ready",
     pairUnavailable:
       "The server storage needed for the phone link hasn't been set up on this site yet. A pairing code will appear here once it is.",
