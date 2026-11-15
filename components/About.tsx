@@ -1,60 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
+import Tiles from "@/components/Tiles";
 import { ABOUT } from "@/lib/about";
-import { browserLang, LANGS, type Lang } from "@/lib/i18n";
+import { FOCUS } from "@/components/ui";
+import { BRAND, LANGS } from "@/lib/i18n";
+import { useLang, writeLang } from "@/lib/useLang";
 
-const LANG_KEY = "splitflat:lang"; // pano ile ortak tercih
-
-// Dil tercihi panonun kullandığı yerde durur; başka sekmede değişirse de izlenir.
-const listeners = new Set<() => void>();
-const subscribe = (cb: () => void) => {
-  listeners.add(cb);
-  window.addEventListener("storage", cb);
-  return () => {
-    listeners.delete(cb);
-    window.removeEventListener("storage", cb);
-  };
-};
-const readLang = (): Lang => {
-  try {
-    const saved = localStorage.getItem(LANG_KEY);
-    if (saved === "tr" || saved === "en") return saved;
-  } catch {
-    // depolama kapalıysa tarayıcı diline düş
-  }
-  return browserLang();
-};
-const writeLang = (lang: Lang) => {
-  try {
-    localStorage.setItem(LANG_KEY, lang);
-  } catch {
-    // tercih yalnızca bu oturumda kalır
-  }
-  listeners.forEach((cb) => cb());
-};
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
-
-/** Başlık: panodaki hücrelerin durağan hali. */
-function Tiles({ text }: { text: string }) {
-  return (
-    <span aria-hidden className="flex gap-[.09em] text-[clamp(1.6rem,7.5vw,3.4rem)]">
-      {[...text].map((ch, i) => (
-        <span
-          key={i}
-          className="relative grid h-[1.3em] w-[.86em] place-items-center bg-linear-to-b from-flap-hi to-flap font-bold shadow-[0_0_0_1px_var(--color-slot)] after:absolute after:inset-x-0 after:top-[calc(50%-.5px)] after:h-px after:bg-hinge after:content-['']"
-        >
-          <span className="text-[.8em] leading-none">{ch}</span>
-        </span>
-      ))}
-    </span>
-  );
-}
 
 export default function About() {
-  const lang = useSyncExternalStore(subscribe, readLang, (): Lang => "tr");
+  const lang = useLang();
   const t = ABOUT[lang];
 
   useEffect(() => {
@@ -93,7 +49,7 @@ export default function About() {
 
           <h1>
             <span className="sr-only">Splitflat</span>
-            <Tiles text="SPLITFLAT" />
+            <Tiles text="SPLITFLAT" className="text-[clamp(1.6rem,7.5vw,3.4rem)]" />
           </h1>
           <p className="text-lg leading-relaxed text-pretty sm:text-xl">{t.lead}</p>
         </header>
@@ -126,7 +82,7 @@ export default function About() {
         ))}
 
         <footer className="flex items-center justify-between gap-4 border-t border-edge pt-6">
-          <span className="text-[11px] tracking-[.42em] text-muted">SPLITFLAT.APP</span>
+          <span className="text-[11px] tracking-[.42em] text-muted">{BRAND}</span>
           <Link
             href="/"
             className={`grid h-11 place-items-center bg-ink px-5 text-sm font-semibold tracking-wider text-pit transition-colors hover:bg-white ${FOCUS}`}

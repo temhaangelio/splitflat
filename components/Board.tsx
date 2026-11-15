@@ -1,12 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
 import FlapCell from "@/components/FlapCell";
+import { FIELD_LABEL, FOCUS, Section, Segmented, Toggle } from "@/components/ui";
+import {
+  DEFAULT_INTERVAL,
+  DEFAULT_SHOW,
+  DEFAULT_SIZE,
+  INTERVALS,
+  MAX_NOTES,
+  NOTE_LIMIT,
+  SIZES,
+  TITLE_LIMIT,
+  toShared,
+  wrap,
+  type Countdown,
+  type Shared,
+  type Show,
+  type SizeId,
+} from "@/lib/board";
+import {
+  createBoard,
+  deleteBoard,
+  newPair,
+  pairUrl,
+  parsePair,
+  readBoard,
+  RemoteError,
+  rotateBoard,
+  writeBoard,
+  type Pair,
+} from "@/lib/remote";
 import { canRecord, captureTab, download, startRecording, timestamp } from "@/lib/record";
 import { savePng } from "@/lib/snapshot";
 import { setSound } from "@/lib/sound";
 import {
+  BRAND,
   browserLang,
   describeWeather,
   LANGS,
@@ -36,47 +73,26 @@ const DEFAULT_CITY = "İstanbul";
 const WEATHER_REFRESH_MS = 15 * 60 * 1000;
 
 const LANG_KEY = "splitflat:lang";
+const REMOTE_KEY = "splitflat:remote";
+// Telefondan kontrol açıkken pano sunucuya bu aralıkla "değişen var mı" diye
+// sorar. Her sorgu depoda bir komut harcar: 7 sn, tek pano için ayda ~370 bin.
+const POLL_MS = 7000;
+const PUSH_DELAY_MS = 500;
+type RemoteNote = "" | "busy" | "unavailable" | "error" | "lost";
 
 /** Panoda sırayla gösterilen içerik: saat, hava durumu ya da bir not (sırası). */
 type Item = "clock" | "weather" | "countdown" | number;
-type Show = {
-  notes: boolean;
-  clock: boolean;
-  seconds: boolean;
-  weather: boolean;
-  countdown: boolean;
-};
-const DEFAULT_SHOW: Show = {
-  notes: true,
-  clock: false,
-  seconds: false,
-  weather: false,
-  countdown: false,
-};
 const COUNTDOWN_KEY = "splitflat:countdown";
-/** Geri sayım hedefi. `target`, tarih seçicinin verdiği yerel "YYYY-AA-GGTSS:DD" metnidir. */
-type Countdown = { title: string; target: string };
-const MAX_NOTES = 20;
-// Notlar arası geçiş süresi seçenekleri (saniye).
-const INTERVALS = [
-  { sec: 15, n: 15, unit: "seconds" },
-  { sec: 30, n: 30, unit: "seconds" },
-  { sec: 60, n: 1, unit: "minutes" },
-  { sec: 300, n: 5, unit: "minutes" },
-] as const;
 const intervalLabel = (sec: number, t: Strings) => {
   const o = INTERVALS.find((i) => i.sec === sec) ?? INTERVALS[1];
   return `${o.n} ${t[o.unit]}`;
 };
-const DEFAULT_INTERVAL = 30;
 // Tanıtım notları, kullanıcının seçtiği süreden bağımsız olarak hızlı döner.
 const INTRO_INTERVAL = 5;
 // Video: pano boşalır, yazı dönerek gelir ve bu kadar süre kaydedilir.
 const RECORD_MS = 7000;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const IDLE_MS = 4000;
-// Kısa notlar panoda en iyi okunur; 100 karakter her ekran boyutuna sığar.
-const NOTE_LIMIT = 100;
 // Yeni bir not yazıldığında renkli kartların araya girme ihtimali.
 const COLOR_CHANCE = 0.3;
 const rollColors = () => Math.random() < COLOR_CHANCE;
@@ -84,17 +100,6 @@ const rollColors = () => Math.random() < COLOR_CHANCE;
 
 /* ---------- Sabit ızgara, ekrana göre ölçek ---------- */
 
-// Hücre sayısı kullanıcının seçtiği boyuttan gelir ve ekrana göre değişmez;
-// ekran boyutu yalnızca panonun ölçeğini değiştirir. Az hücre = büyük, uzaktan
-// okunur harfler. Varsayılan 12 × 5: Türkçedeki uzun kelimelerin çoğuna yeter.
-const SIZES = [
-  { id: "s", cols: 10, rows: 4 },
-  { id: "m", cols: 12, rows: 5 },
-  { id: "l", cols: 16, rows: 6 },
-  { id: "xl", cols: 22, rows: 6 },
-] as const;
-type SizeId = (typeof SIZES)[number]["id"];
-const DEFAULT_SIZE: SizeId = "m";
 const SIZE_KEY = "splitflat:size";
 
 // Ölçüler hücre genişliği (u) cinsinden.
@@ -261,123 +266,8 @@ const ExitFullscreenIcon = () => (
   </Icon>
 );
 
-/* ---------- Ayarlar yapı taşları ---------- */
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="border-t border-edge px-5 py-4 first:border-t-0">
-      <h3 className="mb-1 text-[11px] font-semibold tracking-[.24em] text-muted">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`group flex min-h-11 w-full cursor-pointer items-center justify-between gap-4 text-left ${FOCUS}`}
-    >
-      <span
-        className={`text-sm font-medium tracking-wide transition-colors ${
-          checked ? "text-ink" : "text-muted group-hover:text-ink"
-        }`}
-      >
-        {label}
-      </span>
-      <span
-        aria-hidden
-        className={`relative h-5 w-10 shrink-0 border transition-colors duration-200 ${
-          checked ? "border-ink bg-ink" : "border-edge bg-flap-lo"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 size-3.5 transition-[left,background-color] duration-200 ${
-            checked ? "left-[22px] bg-pit" : "left-0.5 bg-muted"
-          }`}
-        />
-      </span>
-    </button>
-  );
-}
-
-/** Birkaç seçenekten birini seçmek için yan yana düğmeler. */
-function Segmented<T extends string | number>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: readonly { value: T; label: string; aria?: string }[];
-  onChange: (next: T) => void;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={label}
-      className="grid gap-px border border-edge bg-edge"
-      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
-    >
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          aria-label={o.aria}
-          className={`min-h-9 cursor-pointer px-1 text-xs font-semibold tracking-wider tabular-nums transition-colors ${FOCUS} focus-visible:z-10 ${
-            value === o.value ? "bg-ink text-pit" : "bg-pit text-muted hover:text-ink"
-          }`}
-          onClick={() => value !== o.value && onChange(o.value)}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const FIELD_LABEL = "mb-2 mt-3 text-sm font-medium tracking-wide";
-
 /* ---------- Metin yerleşimi ---------- */
 
-function wrap(text: string, width: number): string[] {
-  const lines: string[] = [];
-  let line = "";
-  for (let w of text.split(/\s+/).filter(Boolean)) {
-    while (w.length > width) {
-      // tek kelime satırdan uzunsa böl
-      if (line) lines.push(line);
-      line = "";
-      lines.push(w.slice(0, width));
-      w = w.slice(width);
-    }
-    if (!w) continue;
-    if (!line) line = w;
-    else if (line.length + 1 + w.length <= width) line += " " + w;
-    else {
-      lines.push(line);
-      line = w;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
 
 function readNotes(): string[] {
   const raw = localStorage.getItem(NOTES_KEY);
@@ -475,6 +365,14 @@ export default function Board() {
   // kaydın başında bir anlığına boşaltır ki yazı videoda baştan dönerek gelsin.
   const [recording, setRecording] = useState(false);
   const [blank, setBlank] = useState(false);
+  // Telefondan kontrol: bu panonun anahtarları (yoksa özellik kapalı).
+  const [remote, setRemote] = useState<Pair | null>(null);
+  const [remoteNote, setRemoteNote] = useState<RemoteNote>("");
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qr, setQr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const version = useRef(0); // sunucudaki son bilinen sürüm
+  const synced = useRef<string | null>(null); // sunucuyla eşit olduğu bilinen durum; null: henüz okunmadı
   // Panoya her yeni not geldiğinde artar; bütün hücreler bir tur döner.
   const [spin, setSpin] = useState(0);
   const fullscreen = useSyncExternalStore(subscribeFullscreen, isFullscreen, () => false);
@@ -499,6 +397,8 @@ export default function Board() {
         if (localStorage.getItem(LOCATION_KEY) === "city") setLocationMode("city");
         const savedSize = localStorage.getItem(SIZE_KEY);
         if (SIZES.some((s) => s.id === savedSize)) setSizeId(savedSize as SizeId);
+        const savedRemote = JSON.parse(localStorage.getItem(REMOTE_KEY) ?? "null");
+        if (savedRemote) setRemote(parsePair(`${savedRemote.id}.${savedRemote.key}`));
         const savedCountdown = localStorage.getItem(COUNTDOWN_KEY);
         if (savedCountdown) setCountdown(JSON.parse(savedCountdown));
         const savedCity = localStorage.getItem(CITY_KEY);
@@ -607,6 +507,151 @@ export default function Board() {
       void lock?.release();
     };
   }, []);
+
+  /* ---------- Telefondan kontrol: sunucuyla eşitleme ---------- */
+
+  const sharedJson =
+    notes === null
+      ? null
+      : JSON.stringify(toShared(notes, show, intervalSec, countdown, sizeId));
+
+  /** Sunucudan gelen durumu panoya uygular ve tarayıcıda da saklar. */
+  const applyRemote = useEffectEvent((data: Shared, v: number) => {
+    const json = JSON.stringify(data);
+    version.current = v;
+    synced.current = json;
+    if (json === sharedJson) return;
+    const added = data.notes.length > (notes?.length ?? 0);
+    setNotes(data.notes);
+    setShow(data.show);
+    setIntervalSec(data.intervalSec);
+    setCountdown(data.countdown);
+    setSizeId(data.size);
+    store(NOTES_KEY, JSON.stringify(data.notes));
+    store(SHOW_KEY, JSON.stringify(data.show));
+    store(INTERVAL_KEY, String(data.intervalSec));
+    store(SIZE_KEY, data.size);
+    if (data.countdown) store(COUNTDOWN_KEY, JSON.stringify(data.countdown));
+    else {
+      try {
+        localStorage.removeItem(COUNTDOWN_KEY);
+      } catch {
+        // depolama kapalı
+      }
+    }
+    // Yeni not geldiyse hemen o gösterilir; yoksa döngü baştan başlar.
+    const offset =
+      (data.show.clock ? 1 : 0) + (data.show.weather ? 1 : 0) + (data.show.countdown ? 1 : 0);
+    setColorful(rollColors());
+    setSpin((n) => n + 1);
+    setCurrent(added && data.show.notes ? offset + data.notes.length - 1 : 0);
+  });
+
+  // Sunucuyu düzenli sorgular. İlk okumada sunucudaki durum esas alınır.
+  const loaded = notes !== null;
+  useEffect(() => {
+    if (!remote || !loaded) return;
+    let alive = true;
+    const tick = async () => {
+      try {
+        const known = synced.current === null ? undefined : version.current;
+        const r = await readBoard(remote.id, known);
+        // Sorgu yoldayken bu pano yazdıysa gelen yanıt eskidir; yok sayılır.
+        if (!alive || r.v < version.current) return;
+        if (r.data) applyRemote(r.data, r.v);
+        setRemoteNote("");
+      } catch (e) {
+        if (!alive) return;
+        setRemoteNote(e instanceof RemoteError && e.code === "not_found" ? "lost" : "error");
+      }
+    };
+    void tick();
+    const id = setInterval(tick, POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [remote, loaded]);
+
+  // Bu panoda yapılan değişiklikleri sunucuya yazar.
+  useEffect(() => {
+    if (!remote || sharedJson === null) return;
+    if (synced.current === null || synced.current === sharedJson) return;
+    const t = setTimeout(async () => {
+      try {
+        const r = await writeBoard(remote, JSON.parse(sharedJson) as Shared, version.current);
+        if (r.stale) applyRemote(r.stale, r.v);
+        else {
+          version.current = r.v;
+          synced.current = sharedJson;
+        }
+      } catch {
+        setRemoteNote("error");
+      }
+    }, PUSH_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [remote, sharedJson]);
+
+  // Eşleştirme kodu yalnızca istenince üretilir; kütüphane de o zaman yüklenir.
+  useEffect(() => {
+    if (!remote || !qrOpen) return;
+    let alive = true;
+    void import("qrcode")
+      .then((QR) => QR.toDataURL(pairUrl(remote), { margin: 2, width: 560, errorCorrectionLevel: "M" }))
+      .then((url) => {
+        if (alive) setQr(url);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [remote, qrOpen]);
+
+  const enableRemote = async () => {
+    if (sharedJson === null || remoteNote === "busy") return;
+    const pair = newPair();
+    setRemoteNote("busy");
+    try {
+      version.current = await createBoard(pair, JSON.parse(sharedJson) as Shared);
+      synced.current = sharedJson;
+      store(REMOTE_KEY, JSON.stringify(pair));
+      setRemote(pair);
+      setRemoteNote("");
+    } catch (e) {
+      setRemoteNote(
+        e instanceof RemoteError && e.code === "not_configured" ? "unavailable" : "error",
+      );
+    }
+  };
+
+  const disableRemote = async () => {
+    if (!remote) return;
+    const old = remote;
+    setRemote(null);
+    setQrOpen(false);
+    setQr(null);
+    setRemoteNote("");
+    synced.current = null;
+    try {
+      localStorage.removeItem(REMOTE_KEY);
+      await deleteBoard(old);
+    } catch {
+      // sunucuya ulaşılamadıysa kayıt bir yıl sonra kendiliğinden silinir
+    }
+  };
+
+  const rotateRemote = async () => {
+    if (!remote || !window.confirm(t.remoteRotateConfirm)) return;
+    const next = newPair();
+    try {
+      version.current = await rotateBoard(remote, next);
+      store(REMOTE_KEY, JSON.stringify(next));
+      setQr(null);
+      setRemote(next);
+      setRemoteNote("");
+    } catch {
+      setRemoteNote("error");
+    }
+  };
 
   // Ses varsayılan olarak açık. Tarayıcılar ilk dokunuş ya da tuştan önce ses
   // çalmaya izin vermediği için asıl açılış o ilk etkileşimde olur.
@@ -800,7 +845,7 @@ export default function Board() {
               style={{ bottom: grid.bezel, height: grid.pad - grid.bezel - LIP * (grid.cw / 0.74) }}
             >
               {/* harf aralığı son harften sonra da boşluk bırakır; ortalamak için dengelenir */}
-              <span className="translate-y-[.07em] pl-[.42em]">SPLITFLAT.APP</span>
+              <span className="translate-y-[.07em] pl-[.42em]">{BRAND}</span>
             </div>
             {/* Panoya tek yönden düşen ışık: sağ üst aydınlık, alt kısım gölgede. */}
             <div
@@ -1013,6 +1058,7 @@ export default function Board() {
       <dialog
         ref={settings}
         aria-labelledby="settings-title"
+        onClose={() => setQrOpen(false)}
         className="m-auto max-h-[calc(100dvh-2rem)] w-[min(440px,calc(100vw-1.5rem))] border border-edge bg-pit p-0 text-ink shadow-[0_24px_80px_rgba(0,0,0,.6)] backdrop:bg-black/55 backdrop:backdrop-blur-sm"
         onClick={(e) => {
           if (e.target === e.currentTarget) settings.current?.close();
@@ -1071,7 +1117,7 @@ export default function Board() {
                     onChange={(e) =>
                       saveCountdown({ title: e.target.value, target: countdownTarget })
                     }
-                    maxLength={COLS}
+                    maxLength={Math.min(COLS, TITLE_LIMIT)}
                     aria-label={t.countdownTitle}
                     placeholder={t.countdownTitle}
                     autoComplete="off"
@@ -1194,6 +1240,71 @@ export default function Board() {
               </div>
             </Section>
 
+            <Section title={t.remoteSection}>
+              <Toggle
+                label={t.remoteToggle}
+                checked={remote !== null}
+                onChange={(v) => void (v ? enableRemote() : disableRemote())}
+              />
+              <p className="text-xs leading-relaxed text-muted">{t.remoteHelp}</p>
+              {remote && (
+                <div className="mt-3 flex flex-col gap-2">
+                  {qrOpen && (
+                    <div className="grid place-items-center bg-white p-2">
+                      {qr ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- tarayıcıda üretilen veri adresi
+                        <img src={qr} alt={t.remoteQrAlt} className="aspect-square w-full max-w-[280px]" />
+                      ) : (
+                        <div className="aspect-square w-full max-w-[280px]" />
+                      )}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      aria-expanded={qrOpen}
+                      className={`h-9 cursor-pointer border px-2 text-xs font-semibold tracking-wider transition-colors ${focus} ${
+                        qrOpen
+                          ? "border-edge text-muted hover:text-ink"
+                          : "border-ink bg-ink text-pit hover:bg-white"
+                      }`}
+                      onClick={() => setQrOpen(!qrOpen)}
+                    >
+                      {qrOpen ? t.remoteHide : t.remotePair}
+                    </button>
+                    <button
+                      type="button"
+                      className={`h-9 cursor-pointer border border-edge px-2 text-xs font-semibold tracking-wider text-muted transition-colors hover:border-ink hover:text-ink ${focus}`}
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(pairUrl(remote)).then(() => {
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        });
+                      }}
+                    >
+                      {copied ? t.remoteCopied : t.remoteCopy}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={`h-9 cursor-pointer border border-edge px-2 text-xs font-semibold tracking-wider text-muted transition-colors hover:border-ink hover:text-ink ${focus}`}
+                    onClick={() => void rotateRemote()}
+                  >
+                    {t.remoteRotate}
+                  </button>
+                </div>
+              )}
+              {remoteNote && remoteNote !== "busy" && (
+                <p role="status" className="mt-2 text-xs leading-relaxed text-ink">
+                  {remoteNote === "unavailable"
+                    ? t.remoteUnavailable
+                    : remoteNote === "lost"
+                      ? t.remoteLost
+                      : t.remoteError}
+                </p>
+              )}
+            </Section>
+
             <Section title={t.language}>
               <div className="mt-3">
                 <Segmented
@@ -1210,7 +1321,7 @@ export default function Board() {
             </Section>
 
             <div className="flex items-center justify-between border-t border-edge px-5 py-4">
-              <span className="text-[11px] tracking-[.42em] text-muted">SPLITFLAT.APP</span>
+              <span className="text-[11px] tracking-[.42em] text-muted">{BRAND}</span>
               <Link
                 href="/about"
                 className={`text-xs font-semibold tracking-[.2em] text-muted uppercase transition-colors hover:text-ink ${focus}`}

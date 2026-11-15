@@ -2,6 +2,8 @@
 // yerine aynı ızgara ölçüleriyle bir canvas'a yeniden çizer: ek kütüphane
 // gerekmez ve çıktı ekran çözünürlüğünde (retina dahil) net olur.
 
+import { BRAND } from "@/lib/i18n";
+
 export type BoardLayout = {
   cols: number;
   rows: number;
@@ -147,7 +149,7 @@ export function drawBoard(
   }
 
   // alt nefes boşluğunda marka yazısı; harfler tek tek, aralıklı çizilir
-  const label = "SPLITFLAT.APP";
+  const label = BRAND;
   const labelSize = fontSize * 0.2;
   const spacing = labelSize * 0.42;
   ctx.font = `500 ${labelSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`;

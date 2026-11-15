@@ -1,6 +1,9 @@
 // Arayüz ve pano metinleri. Pano yalnızca büyük harf gösterir; pano metinleri
 // bu yüzden doğrudan büyük harfle yazılır.
 
+/** Panoda, PNG çıktısında ve sayfa altlarında görünen marka yazısı. */
+export const BRAND = "SPLITFLAT.SITE";
+
 export type Lang = "tr" | "en";
 export const LANGS: { value: Lang; label: string }[] = [
   { value: "tr", label: "TÜRKÇE" },
@@ -95,6 +98,36 @@ export const STRINGS = {
     locationError: "Konum alınamadı. Tarayıcıda konum izni ver ya da şehir seç.",
     cityError: "Hava durumu alınamadı. Şehir adını kontrol et.",
     interval: "GEÇİŞ SÜRESİ",
+    // telefondan kontrol
+    remoteSection: "TELEFONDAN KONTROL",
+    remoteToggle: "TELEFONDAN KONTROL",
+    remoteHelp:
+      "Telefonunuzla kodu okutun, panoya oradan not gönderin. Kodu ya da bağlantıyı bilen herkes bu panoya yazabilir; yalnızca güvendiğiniz kişilerle paylaşın.",
+    remotePair: "TELEFON EŞLEŞTİR",
+    remoteHide: "KODU GİZLE",
+    remoteCopy: "BAĞLANTIYI KOPYALA",
+    remoteCopied: "KOPYALANDI",
+    remoteRotate: "BAĞLANTIYI YENİLE",
+    remoteRotateConfirm:
+      "Bağlantı yenilenecek ve eski kod geçersiz olacak. Eşleşmiş telefonların yeniden eşleştirilmesi gerekir. Devam edilsin mi?",
+    remoteQrAlt: "Telefon eşleştirme kodu",
+    remoteUnavailable: "Bu özellik sunucuda henüz ayarlanmamış.",
+    remoteError: "Sunucuya ulaşılamadı. Pano çalışmaya devam ediyor; bağlantı gelince eşitlenecek.",
+    remoteLost: "Bu pano sunucuda bulunamadı. Özelliği kapatıp yeniden açın.",
+    // telefon sayfası
+    phoneTitle: "Pano kumandası",
+    phoneNotPaired:
+      "Bu telefon bir panoyla eşleşmemiş. Panoda Ayarlar → Telefondan kontrol → Telefon eşleştir deyip çıkan kodu okutun.",
+    phoneGone:
+      "Bu pano artık yok ya da bağlantısı yenilenmiş. Panodaki yeni kodu okutun.",
+    phoneOffline: "Sunucuya ulaşılamadı. Yeniden deneniyor…",
+    phoneLoading: "Pano yükleniyor…",
+    phoneAdd: "EKLE",
+    phoneTooLong: "Bu not panoya sığmıyor.",
+    phoneFull: "Liste dolu. Yeni not için birini silin.",
+    phoneSent: "Panoya gönderildi",
+    phoneForget: "BU TELEFONU UNUT",
+    phoneForgetConfirm: "Bu telefonun panoyla eşleşmesi kaldırılsın mı?",
     downloadPng: "PNG olarak kaydet",
     recordVideo: "Video kaydet",
   },
@@ -171,6 +204,33 @@ export const STRINGS = {
     locationError: "Couldn't get your location. Allow location access or choose a city.",
     cityError: "Couldn't get the weather. Check the city name.",
     interval: "ROTATION INTERVAL",
+    remoteSection: "PHONE CONTROL",
+    remoteToggle: "PHONE CONTROL",
+    remoteHelp:
+      "Scan the code with your phone and send notes to the board from there. Anyone with the code or link can write to this board; share it only with people you trust.",
+    remotePair: "PAIR A PHONE",
+    remoteHide: "HIDE CODE",
+    remoteCopy: "COPY LINK",
+    remoteCopied: "COPIED",
+    remoteRotate: "RESET LINK",
+    remoteRotateConfirm:
+      "The link will be reset and the old code will stop working. Paired phones will need to be paired again. Continue?",
+    remoteQrAlt: "Phone pairing code",
+    remoteUnavailable: "This feature isn't set up on the server yet.",
+    remoteError: "Couldn't reach the server. The board keeps working and will sync when it's back.",
+    remoteLost: "This board wasn't found on the server. Turn the feature off and on again.",
+    phoneTitle: "Board remote",
+    phoneNotPaired:
+      "This phone isn't paired with a board. On the board, open Settings → Phone control → Pair a phone and scan the code.",
+    phoneGone: "This board no longer exists or its link was reset. Scan the new code on the board.",
+    phoneOffline: "Couldn't reach the server. Retrying…",
+    phoneLoading: "Loading the board…",
+    phoneAdd: "ADD",
+    phoneTooLong: "This note doesn't fit on the board.",
+    phoneFull: "The list is full. Delete a note to add a new one.",
+    phoneSent: "Sent to the board",
+    phoneForget: "FORGET THIS PHONE",
+    phoneForgetConfirm: "Unpair this phone from the board?",
     downloadPng: "Save as PNG",
     recordVideo: "Record video",
   },
