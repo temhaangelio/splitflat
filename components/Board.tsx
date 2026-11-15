@@ -230,6 +230,13 @@ const RecordIcon = () => (
     <circle cx="12" cy="12" r="3" fill="currentColor" />
   </Icon>
 );
+const InfoIcon = () => (
+  <Icon>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v6" />
+    <path d="M12 7.5h.01" />
+  </Icon>
+);
 const DownloadIcon = () => (
   <Icon>
     <path d="M12 4v11" />
@@ -806,6 +813,22 @@ export default function Board() {
         {/* Film greni: düz dijital yüzeyleri fotoğraf gibi gösterir. */}
         <div aria-hidden className="grain" />
       </section>
+
+      {/* Hakkında: sağ üstte, alttaki kontrollerle birlikte gizlenip görünür. */}
+      <Link
+        href="/about"
+        aria-label={t.about}
+        title={t.about}
+        className={`${panel} ${focus} fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-20 grid size-11 place-items-center text-ink transition-opacity duration-700 hover:bg-flap-hi ${
+          recording
+            ? "pointer-events-none invisible opacity-0"
+            : idle
+              ? "pointer-events-none opacity-0"
+              : "opacity-100"
+        }`}
+      >
+        <InfoIcon />
+      </Link>
 
       <div
         ref={controls}
