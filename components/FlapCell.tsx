@@ -51,6 +51,15 @@ const FAST_FROM = 6;
 const FAST_MS = 60;
 const FAST_STEP = 4;
 
+// Hafif görünüm: zayıf cihazlar (ör. Raspberry Pi Zero 2 W) için. Açıkken her
+// hücre hedefe yalnızca birkaç kart uzaktan başlar, harfi değişmeyen hücreler
+// hiç dönmez ve düşüş gölge/parlaklık efekti olmadan, yalnızca döndürmeyle
+// çizilir. Tüm hücreler için ortak olduğundan modül düzeyinde tutulur.
+let lite = false;
+export const setLiteMode = (on: boolean) => {
+  lite = on;
+};
+
 /**
  * Animasyon motoru React'in dışında, doğrudan DOM üzerinde çalışır: bir harf
  * değişimi onlarca ara yaprak demek, bunları render döngüsüne sokmuyoruz.
@@ -103,7 +112,12 @@ class FlapEngine {
       this.show(1, this.face);
       return;
     }
-    if (kicked && !this.reduced) {
+    if (kicked && lite && !this.reduced) {
+      if (this.idx === this.target) return;
+      const back = 2 + Math.floor(Math.random() * 3);
+      this.idx = (this.target - back + CHARS.length) % CHARS.length;
+      this.lap = false;
+    } else if (kicked && !this.reduced) {
       // Her hücre tamburu farklı bir yerden çevirmeye başlar; böylece hücreler
       // aynı harfleri birlikte göstermez ve farklı anlarda yerine oturur.
       // Görünen yaprak (face) değişmez, ilk düşüşte rastgele bir harf belirir.
@@ -163,6 +177,28 @@ class FlapEngine {
     this.running = false;
   }
 
+  /** Hafif görünümdeki düşüş: aynı iki yarım, yalnızca döndürme. */
+  private async flipLite(cur: string, next: string, ms: number) {
+    const [, , fTop, fBot] = this.halves;
+    this.show(0, next);
+    this.show(2, cur);
+    this.show(3, next);
+    fTop.style.visibility = "visible";
+    await fTop.animate([{ transform: "rotateX(0deg)" }, { transform: "rotateX(-90deg)" }], {
+      duration: ms / 2,
+      easing: "ease-in",
+    }).finished;
+    fTop.style.visibility = "hidden";
+    fBot.style.visibility = "visible";
+    await fBot.animate([{ transform: "rotateX(90deg)" }, { transform: "rotateX(0deg)" }], {
+      duration: ms / 2,
+      easing: "ease-out",
+    }).finished;
+    this.show(1, next);
+    fBot.style.visibility = "hidden";
+    tick();
+  }
+
   /**
    * Tek bir kartın menteşe etrafında 180° dönerek düşmesi. İki yarım olarak
    * çizilir: önce eski harfin üst yarısı öne doğru devrilir (0° → 90°), kart
@@ -170,6 +206,7 @@ class FlapEngine {
    * iner (90° → 0°). Hareket baştan sona hızlanır, sonunda durdurucuya çarpar.
    */
   private async flip(cur: string, next: string, ms: number, last: boolean) {
+    if (lite) return this.flipLite(cur, next, ms);
     const [sTop, sBot, fTop, fBot] = this.halves;
     const fall = ms * 0.58; // yerçekimiyle hızlandığı için ilk yarı daha uzun sürer
     const drop = ms - fall;

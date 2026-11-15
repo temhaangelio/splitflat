@@ -98,3 +98,34 @@ dialog[open]::backdrop {
   scrollbar-width: thin;
   scrollbar-color: var(--color-edge) transparent;
 }
+
+/*
+ * Hafif görünüm (<html data-lite>): zayıf cihazlarda ekranı çizmeyi pahalı
+ * yapan her şeyi kapatır. Pano aynı pano olarak kalır; gren, ışık katmanı,
+ * duvar dokusu, bulanıklık ve büyük gölgeler gider.
+ */
+[data-lite] .grain,
+[data-lite] .board-light {
+  display: none;
+}
+[data-lite] .wall {
+  background-image: none;
+}
+[data-lite] .board-frame {
+  box-shadow: none !important;
+}
+[data-lite] .board-surface {
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1px var(--color-slot) !important;
+}
+[data-lite] [data-half] {
+  box-shadow: none !important;
+}
+[data-lite] * {
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+/* Ayarlar penceresinin arkasındaki bulanıklık da; ::backdrop yukarıdaki * ile eşleşmez. */
+[data-lite] dialog::backdrop {
+  backdrop-filter: none !important;
+}
