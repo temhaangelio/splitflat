@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Tarayıcı çeviri önermesin: pano metni çevrilirse hücreler bozulur ve
+  // kiosk ekranında kapatılamayan bir çeviri balonu çıkar.
+  other: { google: "notranslate" },
   title: "Splitflat",
   description:
     "Ev için split-flap pano: notları telefondan gönderin, ekran dönerek göstersin. A split-flap board for your home, controlled from your phone.",
@@ -23,7 +26,7 @@ export default function RootLayout({
     // Hafif görünüm sayfa çizilmeden önce belirlenir ki zayıf cihaz ağır
     // katmanları bir kez bile çizmesin: kayıtlı tercih, yoksa adresteki ?lite
     // ya da tarayıcının bildirdiği bellek 1 GB ve altındaysa açılır.
-    <html lang="tr" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="tr" translate="no" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
