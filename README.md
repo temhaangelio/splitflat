@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Splitflat
 
-## Getting Started
+Havaalanlarındaki ve tren garlarındaki dönen harfli panoları eve getiren bir web uygulaması. Notunuzu yazın; kartlar tek tek dönerek yerine otursun.
 
-First, run the development server:
+A split-flap board for your home: type a note and watch the cards flip into place.
+
+## Özellikler
+
+- **Notlar:** 20 nota kadar; seçilen aralıkla sırayla döner.
+- **Saat ve tarih:** isteğe bağlı saniyeyle.
+- **Hava durumu:** otomatik konum ya da seçilen şehir.
+- **Geri sayım:** başlık ve hedef tarih.
+- **Kayıt:** panoyu PNG ya da kısa video olarak indirme.
+- **Duvar ekranı:** tam ekran, kendiliğinden gizlenen kontroller, ekran uyku kilidi.
+- **Ayarlar:** hücre sayısı (10×4, 12×5, 16×6, 22×6), duvar arka planı, ses, Türkçe / İngilizce.
+
+Hesap ve sunucu yok: notlar ve ayarlar yalnızca tarayıcıda (`localStorage`) saklanır. Hava durumu açıkken [Open-Meteo](https://open-meteo.com) ve [BigDataCloud](https://www.bigdatacloud.com) çağrılır; ikisi de anahtar gerektirmez.
+
+## Geliştirme
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ardından <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Yapı
 
-## Learn More
+| Dosya | İçerik |
+|---|---|
+| `components/Board.tsx` | Pano, kontrol şeridi, not listesi, ayarlar |
+| `components/FlapCell.tsx` | Tek hücre ve kart çevirme animasyonu |
+| `components/About.tsx` | Hakkında sayfası (`/about`) |
+| `lib/i18n.ts`, `lib/about.ts` | Türkçe ve İngilizce metinler |
+| `lib/weather.ts` | Hava durumu ve konum |
+| `lib/snapshot.ts`, `lib/record.ts` | PNG ve video kaydı |
+| `lib/sound.ts` | Kart sesi |
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 16, React 19, Tailwind CSS 4. Vercel'de ek ayar gerektirmeden yayınlanır.
