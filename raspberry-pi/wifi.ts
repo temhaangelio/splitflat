@@ -25,7 +25,11 @@ const BOOT_WAIT_MS = Number(process.env.SPLITFLAT_WIFI_WAIT_MS) || 60_000;
 const CHECK_MS = 10_000;
 // Bağlantı bu kadar süre kopuk kalırsa kurulum ağı açılır. Modemin kısa süreli
 // yeniden başlaması bunu tetiklemesin diye uzun tutulur.
-const LOST_MS = 3 * 60_000;
+const LOST_MS = Number(process.env.SPLITFLAT_WIFI_LOST_MS) || 3 * 60_000;
+// Kurulum ağı açık ama kimse kullanmıyorsa (telefon katılmadı), bu aralıkla
+// kurulum ağı kısa süre kapatılıp kayıtlı ağlar yeniden denenir. Böylece
+// kopan ağ (ör. uykuya geçen telefon hotspot'u) geri gelince Pi kendisi döner.
+const RETRY_SAVED_MS = Number(process.env.SPLITFLAT_WIFI_RETRY_MS) || 3 * 60_000;
 
 const SETUP_CON = "splitflap-setup";
 const IP = process.env.SPLITFLAT_IP || "ip";
@@ -70,6 +74,7 @@ export type WifiState = {
 
 const state: WifiState = { mode: "checking", networks: [] };
 let setupPassword = "";
+let setupSince = 0; // kurulum ağının açıldığı an
 let busy = false;
 
 /* ---------- nmcli ---------- */
@@ -120,14 +125,20 @@ async function connectedTo(): Promise<string | null> {
   return null;
 }
 
+/** Pi'de kayıtlı WiFi ağlarının bağlantı adları (kurulum ağı hariç). */
+async function savedWifi(): Promise<string[]> {
+  const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"], 20_000, true);
+  return out
+    .split("\n")
+    .map(fields)
+    .filter(([type, name]) => type === "802-11-wireless" && name && name !== SETUP_CON)
+    .map(([, name]) => name);
+}
+
 /** Pi'de kayıtlı bir WiFi ağı var mı? Yoksa açılışta beklemenin anlamı yok. */
 async function hasSavedWifi(): Promise<boolean> {
   try {
-    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"], 20_000, true);
-    return out
-      .split("\n")
-      .map(fields)
-      .some(([type, name]) => type === "802-11-wireless" && name !== SETUP_CON);
+    return (await savedWifi()).length > 0;
   } catch {
     return true; // bilinmiyorsa beklenir
   }
@@ -157,13 +168,25 @@ async function scan(): Promise<Network[]> {
  * düşer. `ip neigh` için yönetici yetkisi gerekmez.
  */
 function hasClient(): Promise<boolean> {
+  // Yalnızca kurulum ağının adres aralığındaki ve şu an konuşan (REACHABLE,
+  // DELAY, PROBE) cihazlar sayılır. Önceki ağdan ya da önceki kurulumdan tabloda
+  // kalan eski kayıtlar telefon sanılmasın.
+  const own = state.setup?.address ?? "";
+  const prefix = own.split(".").slice(0, 3).join(".") + ".";
   return new Promise((resolve) => {
+    if (!own) return resolve(false);
     execFile(IP, ["neigh", "show", "dev", IFACE], { timeout: 5000 }, (err, stdout) => {
       if (err) return resolve(false);
       resolve(
-        stdout
-          .split("\n")
-          .some((l) => l.includes("lladdr") && !/\b(FAILED|INCOMPLETE)\b/.test(l)),
+        stdout.split("\n").some((l) => {
+          const ip = l.split(" ")[0];
+          return (
+            ip.startsWith(prefix) &&
+            ip !== own &&
+            l.includes("lladdr") &&
+            /\b(REACHABLE|DELAY|PROBE)\b/.test(l)
+          );
+        }),
       );
     });
   });
@@ -209,6 +232,7 @@ async function openSetup() {
   state.mode = "setup";
   state.step = "join";
   state.ssid = undefined;
+  setupSince = Date.now();
   console.log(`WiFi kurulum ağı açık: ${SETUP_SSID} (${state.setup.address})`);
   watchClients();
 }
@@ -318,6 +342,30 @@ export function requestConnect(ssid: unknown, password: unknown): string | null 
   return null;
 }
 
+/**
+ * Kurulum ağını kapatıp kayıtlı ağları dener. Önce NetworkManager'ın kendisinin
+ * bağlanması beklenir, sonra her kayıtlı ağ sırayla açılmaya çalışılır.
+ * Bağlanırsa ağın adını, bağlanamazsa null döner (çağıran kurulum ağını açar).
+ */
+async function retrySaved(): Promise<string | null> {
+  const saved = await savedWifi().catch(() => []);
+  if (saved.length === 0) return null;
+  console.log(`WiFi: kayıtlı ağlar yeniden deneniyor (${saved.join(", ")})`);
+  state.mode = "checking";
+  await closeSetup();
+  for (let i = 0; i < 15; i++) {
+    await sleep(1000);
+    const con = await connectedTo().catch(() => null);
+    if (con) return con;
+  }
+  for (const name of saved) {
+    await nmcli(["con", "up", "id", name], 30_000).catch(() => {});
+    const con = await connectedTo().catch(() => null);
+    if (con) return con;
+  }
+  return null;
+}
+
 /** Açılışta ağı bekler; bağlanamazsa ya da bağlantı uzun süre koparsa kurulum ağını açar. */
 export async function startWifi() {
   try {
@@ -337,7 +385,32 @@ export async function startWifi() {
   const started = Date.now();
   let lostSince: number | null = null;
   const tick = async () => {
-    if (busy || state.mode === "setup" || state.mode === "connecting") return;
+    if (busy || state.mode === "connecting") return;
+    if (state.mode === "setup") {
+      // Kurulumla kimse ilgilenmiyorsa kayıtlı ağlara dönmeyi dene.
+      if (state.step !== "join" || Date.now() - setupSince < RETRY_SAVED_MS) return;
+      busy = true;
+      try {
+        const con = await retrySaved();
+        if (con) {
+          state.mode = "online";
+          state.ssid = con;
+          state.error = undefined;
+          lostSince = null;
+          console.log(`WiFi: ${con} ağına geri dönüldü`);
+        } else if (state.mode !== "setup") {
+          await openSetup();
+        } else {
+          setupSince = Date.now(); // kayıtlı ağ yok; bir sonraki denemeyi beklet
+        }
+      } catch (e) {
+        console.error("Kayıtlı ağlar denenemedi:", e);
+        await openSetup().catch(() => {});
+      } finally {
+        busy = false;
+      }
+      return;
+    }
     const con = await connectedTo().catch(() => null);
     if (con) {
       state.mode = "online";

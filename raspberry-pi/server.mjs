@@ -81,13 +81,15 @@ var USE_SUDO = process.env.SPLITFLAT_NMCLI_SUDO !== "0";
 var IFACE = process.env.SPLITFLAT_WIFI_IFACE || "wlan0";
 var BOOT_WAIT_MS = Number(process.env.SPLITFLAT_WIFI_WAIT_MS) || 6e4;
 var CHECK_MS = 1e4;
-var LOST_MS = 3 * 6e4;
+var LOST_MS = Number(process.env.SPLITFLAT_WIFI_LOST_MS) || 3 * 6e4;
+var RETRY_SAVED_MS = Number(process.env.SPLITFLAT_WIFI_RETRY_MS) || 3 * 6e4;
 var SETUP_CON = "splitflap-setup";
 var IP = process.env.SPLITFLAT_IP || "ip";
 var CLIENT_CHECK_MS = 1e3;
 var SETUP_SSID = "Split Flap Kurulum";
 var state = { mode: "checking", networks: [] };
 var setupPassword = "";
+var setupSince = 0;
 var busy = false;
 var NmcliMissing = class extends Error {
 };
@@ -125,10 +127,13 @@ async function connectedTo() {
   }
   return null;
 }
+async function savedWifi() {
+  const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"], 2e4, true);
+  return out.split("\n").map(fields).filter(([type, name]) => type === "802-11-wireless" && name && name !== SETUP_CON).map(([, name]) => name);
+}
 async function hasSavedWifi() {
   try {
-    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"], 2e4, true);
-    return out.split("\n").map(fields).some(([type, name]) => type === "802-11-wireless" && name !== SETUP_CON);
+    return (await savedWifi()).length > 0;
   } catch {
     return true;
   }
@@ -149,11 +154,17 @@ async function scan() {
   return [...best.values()].sort((a, b) => b.signal - a.signal).slice(0, 30);
 }
 function hasClient() {
+  const own = state.setup?.address ?? "";
+  const prefix = own.split(".").slice(0, 3).join(".") + ".";
   return new Promise((resolve) => {
+    if (!own) return resolve(false);
     execFile(IP, ["neigh", "show", "dev", IFACE], { timeout: 5e3 }, (err, stdout) => {
       if (err) return resolve(false);
       resolve(
-        stdout.split("\n").some((l) => l.includes("lladdr") && !/\b(FAILED|INCOMPLETE)\b/.test(l))
+        stdout.split("\n").some((l) => {
+          const ip = l.split(" ")[0];
+          return ip.startsWith(prefix) && ip !== own && l.includes("lladdr") && /\b(REACHABLE|DELAY|PROBE)\b/.test(l);
+        })
       );
     });
   });
@@ -197,6 +208,7 @@ async function openSetup() {
   state.mode = "setup";
   state.step = "join";
   state.ssid = void 0;
+  setupSince = Date.now();
   console.log(`WiFi kurulum a\u011F\u0131 a\xE7\u0131k: ${SETUP_SSID} (${state.setup.address})`);
   watchClients();
 }
@@ -289,6 +301,25 @@ function requestConnect(ssid, password) {
   void connect(ssid, password);
   return null;
 }
+async function retrySaved() {
+  const saved = await savedWifi().catch(() => []);
+  if (saved.length === 0) return null;
+  console.log(`WiFi: kay\u0131tl\u0131 a\u011Flar yeniden deneniyor (${saved.join(", ")})`);
+  state.mode = "checking";
+  await closeSetup();
+  for (let i = 0; i < 15; i++) {
+    await sleep(1e3);
+    const con = await connectedTo().catch(() => null);
+    if (con) return con;
+  }
+  for (const name of saved) {
+    await nmcli(["con", "up", "id", name], 3e4).catch(() => {
+    });
+    const con = await connectedTo().catch(() => null);
+    if (con) return con;
+  }
+  return null;
+}
 async function startWifi() {
   try {
     await connectedTo();
@@ -305,7 +336,32 @@ async function startWifi() {
   const started = Date.now();
   let lostSince = null;
   const tick = async () => {
-    if (busy || state.mode === "setup" || state.mode === "connecting") return;
+    if (busy || state.mode === "connecting") return;
+    if (state.mode === "setup") {
+      if (state.step !== "join" || Date.now() - setupSince < RETRY_SAVED_MS) return;
+      busy = true;
+      try {
+        const con2 = await retrySaved();
+        if (con2) {
+          state.mode = "online";
+          state.ssid = con2;
+          state.error = void 0;
+          lostSince = null;
+          console.log(`WiFi: ${con2} a\u011F\u0131na geri d\xF6n\xFCld\xFC`);
+        } else if (state.mode !== "setup") {
+          await openSetup();
+        } else {
+          setupSince = Date.now();
+        }
+      } catch (e) {
+        console.error("Kay\u0131tl\u0131 a\u011Flar denenemedi:", e);
+        await openSetup().catch(() => {
+        });
+      } finally {
+        busy = false;
+      }
+      return;
+    }
     const con = await connectedTo().catch(() => null);
     if (con) {
       state.mode = "online";

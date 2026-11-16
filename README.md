@@ -39,7 +39,7 @@ Pi açıldıktan sonra bir dakika içinde hiçbir WiFi ağına bağlanamazsa (ya
 2. Pi telefonun katıldığını fark edince ekran kurulum sayfasının (`/setup`) koduna geçer.
 3. Telefon sayfayı açınca ekranda kod kalmaz; telefondan evin ağı seçilip şifresi girilir.
 
-Pi kurulum ağını kapatıp seçilen ağa geçer. Bağlanamazsa kurulum ağını aynı şifreyle yeniden açar ve nedenini ekranda yazar (şifre yanlış, ağ bulunamadı, ağ adres vermedi). Zero 2 W yalnızca 2,4 GHz ağlara bağlanabilir.
+Kurulum ağı açıkken telefon katılmazsa Pi üç dakikada bir kurulum ağını kısa süre kapatıp kayıtlı ağları yeniden dener; böylece kopan ağ (ör. uykuya geçen bir telefon hotspot'u) geri gelince kendisi döner. Pi kurulum ağını kapatıp seçilen ağa geçer. Bağlanamazsa kurulum ağını aynı şifreyle yeniden açar ve nedenini ekranda yazar (şifre yanlış, ağ bulunamadı, ağ adres vermedi). Zero 2 W yalnızca 2,4 GHz ağlara bağlanabilir.
 
 WiFi'yi NetworkManager (`nmcli`) yönetir; `install.sh` sunucuya yalnızca `nmcli` için şifresiz `sudo` izni verir (`/etc/sudoers.d/splitflat-nmcli`). Kurulum isteği yalnızca kurulum ağındaki cihazlardan ve yalnızca kurulum modundayken kabul edilir.
 
