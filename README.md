@@ -122,7 +122,7 @@ Pi yaklaşık bir dakika içinde kendisi günceller.
 | `components/Remote.tsx` | Telefon kumandası (`/remote`) |
 | `components/About.tsx` | Hakkında sayfası (`/about`) |
 | `raspberry-pi/server.ts` | Pi sunucusu: site dosyaları ve `/api/board` |
-| `raspberry-pi/install.sh`, `update.sh`, `splitflat.service` | Pi kurulumu |
+| `raspberry-pi/install.sh`, `update.sh`, `apply.sh`, `splitflat.service` | Pi kurulumu; update.sh çeker, apply.sh uygular |
 | `raspberry-pi/boot.html`, `kiosk.sh` | Açılışta hareketli yükleniyor sayfası |
 | `raspberry-pi/auto-update.sh`, `splitflat-update.timer` | Otomatik güncelleme |
 | `raspberry-pi/wifi.ts` | İnternet kurulumu ve WiFi sıfırlama |
