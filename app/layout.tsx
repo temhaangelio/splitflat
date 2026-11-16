@@ -5,10 +5,10 @@ export const metadata: Metadata = {
   // Tarayıcı çeviri önermesin: pano metni çevrilirse hücreler bozulur ve
   // kiosk ekranında kapatılamayan bir çeviri balonu çıkar.
   other: { google: "notranslate" },
-  title: "Splitflat",
+  title: "Split Flap",
   description:
     "Ev için split-flap pano: notları telefondan gönderin, ekran dönerek göstersin. A split-flap board for your home, controlled from your phone.",
-  applicationName: "Split-Flap",
+  applicationName: "Split Flap",
 };
 
 export const viewport: Viewport = {

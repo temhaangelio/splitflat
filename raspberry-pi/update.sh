@@ -1,5 +1,5 @@
 #!/bin/bash
-# Splitflat'in yeni sürümünü GitHub'dan çeker ve sunucuyu yeniden başlatır.
+# Split Flap'in yeni sürümünü GitHub'dan çeker ve sunucuyu yeniden başlatır.
 # Notlar ~/.splitflat altında durur; güncelleme onlara dokunmaz.
 #
 #   bash ~/splitflat/raspberry-pi/update.sh

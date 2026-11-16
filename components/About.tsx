@@ -15,7 +15,7 @@ export default function About() {
 
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = `${t.metaTitle} · Splitflat`;
+    document.title = `${t.metaTitle} · Split Flap`;
   }, [lang, t.metaTitle]);
 
   return (
@@ -48,8 +48,8 @@ export default function About() {
           </div>
 
           <h1>
-            <span className="sr-only">Splitflat</span>
-            <Tiles text="SPLITFLAT" className="text-[clamp(1.6rem,7.5vw,3.4rem)]" />
+            <span className="sr-only">Split Flap</span>
+            <Tiles text={BRAND} className="text-[clamp(1.4rem,6.6vw,3.1rem)]" />
           </h1>
           <p className="text-lg leading-relaxed text-pretty sm:text-xl">{t.lead}</p>
         </header>

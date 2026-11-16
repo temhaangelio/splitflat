@@ -15,7 +15,7 @@ import {
   TITLE_LIMIT,
   type Shared,
 } from "@/lib/board";
-import { LANGS, STRINGS, upper } from "@/lib/i18n";
+import { BRAND, LANGS, STRINGS, upper } from "@/lib/i18n";
 import {
   createBoard,
   deleteBoard,
@@ -62,7 +62,7 @@ export default function Remote() {
 
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = `${t.phoneTitle} · Splitflat`;
+    document.title = `${t.phoneTitle} · ${STRINGS[lang].title}`;
   }, [lang, t.phoneTitle]);
 
   // Anahtarlar: önce adresteki eşleştirme bağlantısı, yoksa kayıtlı eşleşme.
@@ -192,8 +192,8 @@ export default function Remote() {
       <div className="mx-auto flex max-w-[520px] flex-col px-4 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <header className="mb-6 flex items-center justify-between gap-4">
           <h1>
-            <span className="sr-only">Splitflat · {t.phoneTitle}</span>
-            <Tiles text="SPLITFLAT" className="text-[1.25rem]" />
+            <span className="sr-only">Split Flap · {t.phoneTitle}</span>
+            <Tiles text={BRAND} className="text-[1.1rem]" />
           </h1>
           <Link
             href="/about"

@@ -1,7 +1,7 @@
-# Splitflat sunucusu: Pi açılınca başlar, çökerse yeniden başlar.
+# Split Flap sunucusu: Pi açılınca başlar, çökerse yeniden başlar.
 # install.sh bu dosyayı kullanıcı adı ve klasöre göre doldurup kurar.
 [Unit]
-Description=Splitflat pano sunucusu
+Description=Split Flap pano sunucusu
 After=network.target
 
 [Service]

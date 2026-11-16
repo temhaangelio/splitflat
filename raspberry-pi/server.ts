@@ -1,4 +1,4 @@
-// Splitflat'in Raspberry Pi'de çalışan sunucusu. İki işi var:
+// Split Flap'in Raspberry Pi'de çalışan sunucusu. İki işi var:
 //
 //   1. Derlenmiş siteyi (./site) sunmak: pano, telefon kumandası, Hakkında.
 //   2. Pano kaydını tutmak (/api/board): telefon yazar, pano okur.
@@ -286,6 +286,6 @@ createServer((req, res) => {
     done(e);
   }
 }).listen(PORT, () => {
-  console.log(`Splitflat: http://localhost:${PORT}  (ev ağında: ${lanOrigin() ?? "adres bulunamadı"})`);
+  console.log(`Split Flap: http://localhost:${PORT}  (ev ağında: ${lanOrigin() ?? "adres bulunamadı"})`);
   console.log(`Kayıtlar: ${DATA_FILE}`);
 });

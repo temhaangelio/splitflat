@@ -14,7 +14,7 @@ export type AboutContent = {
 export const ABOUT: Record<Lang, AboutContent> = {
   tr: {
     metaTitle: "Hakkında",
-    lead: "Splitflat, havaalanlarındaki ve tren garlarındaki dönen harfli panoları evinize getirir. Bir ekran pano olur, telefonunuz kumanda: notunuzu gönderin, kartlar tek tek dönerek yerine otursun.",
+    lead: "Split Flap, havaalanlarındaki ve tren garlarındaki dönen harfli panoları evinize getirir. Bir ekran pano olur, telefonunuz kumanda: notunuzu gönderin, kartlar tek tek dönerek yerine otursun.",
     back: "Panoya dön",
     sections: [
       {
@@ -49,7 +49,7 @@ export const ABOUT: Record<Lang, AboutContent> = {
   },
   en: {
     metaTitle: "About",
-    lead: "Splitflat brings the flipping-letter boards of airports and train stations into your home. A screen becomes the board and your phone is the remote: send a note and watch the cards flip into place one by one.",
+    lead: "Split Flap brings the flipping-letter boards of airports and train stations into your home. A screen becomes the board and your phone is the remote: send a note and watch the cards flip into place one by one.",
     back: "Back to the board",
     sections: [
       {

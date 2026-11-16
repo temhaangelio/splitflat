@@ -1,4 +1,4 @@
-# Splitflat
+# Split Flap
 
 Havaalanlarındaki ve tren garlarındaki dönen harfli panoları eve getiren bir uygulama. Evdeki bir Raspberry Pi'de çalışır: Pi'ye bağlı ekran pano olur, telefon kumanda. Notunuzu gönderin; kartlar tek tek dönerek yerine otursun.
 

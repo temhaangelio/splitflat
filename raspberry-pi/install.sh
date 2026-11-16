@@ -1,5 +1,5 @@
 #!/bin/bash
-# Splitflat'i Raspberry Pi'ye kurar. Bir kez çalıştırılır:
+# Split Flap'i Raspberry Pi'ye kurar. Bir kez çalıştırılır:
 #
 #   git clone https://github.com/temhaangelio/splitflat.app.git ~/splitflat
 #   bash ~/splitflat/raspberry-pi/install.sh

@@ -1,8 +1,8 @@
 // Pano ve telefon sayfasının metinleri. Pano yalnızca büyük harf gösterir; pano
 // metinleri bu yüzden doğrudan büyük harfle yazılır.
 
-/** Sayfa altlarında görünen marka yazısı. */
-export const BRAND = "SPLITFLAT.SITE";
+/** Uygulamanın adı; logo ve sayfa altlarında görünür. */
+export const BRAND = "SPLIT FLAP";
 
 export type Lang = "tr" | "en";
 export const LANGS: { value: Lang; label: string }[] = [
@@ -20,14 +20,14 @@ export const upper = (s: string, lang: Lang) => s.toLocaleUpperCase(locale(lang)
 
 export const STRINGS = {
   tr: {
-    title: "Splitflat",
+    title: "Split Flap",
 
     /* ----- pano ----- */
     board: "Split-flap pano",
     // Gösterilecek başka bir şey yokken sırayla dönen tanıtım notları. Satırlar
     // elle bölünür ki kelimeler ortasından kırılmasın (pano 12 sütun, 5 satır).
     intro: [
-      ["SPLITFLAT'E", "HOŞ GELDİNİZ"],
+      ["SPLIT FLAP", "", "HOŞ GELDİNİZ"],
       ["TELEFONDAN", "NOT GÖNDERİN"],
       ["SAAT, TARİH", "VE HAVA", "DURUMUNU", "TELEFONDAN", "AÇIN"],
       ["GERİ SAYIM", "BAŞLATIN"],
@@ -107,11 +107,11 @@ export const STRINGS = {
     phoneForgetConfirm: "Bu telefonun panoyla eşleşmesi kaldırılsın mı?",
   },
   en: {
-    title: "Splitflat",
+    title: "Split Flap",
 
     board: "Split-flap board",
     intro: [
-      ["WELCOME TO", "SPLITFLAT"],
+      ["WELCOME TO", "SPLIT FLAP"],
       ["SEND NOTES", "FROM YOUR", "PHONE"],
       ["TURN ON TIME", "DATE AND", "WEATHER", "FROM YOUR", "PHONE"],
       ["START A", "COUNTDOWN"],

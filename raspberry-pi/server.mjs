@@ -274,6 +274,6 @@ createServer((req, res) => {
     done(e);
   }
 }).listen(PORT, () => {
-  console.log(`Splitflat: http://localhost:${PORT}  (ev a\u011F\u0131nda: ${lanOrigin() ?? "adres bulunamad\u0131"})`);
+  console.log(`Split Flap: http://localhost:${PORT}  (ev a\u011F\u0131nda: ${lanOrigin() ?? "adres bulunamad\u0131"})`);
   console.log(`Kay\u0131tlar: ${DATA_FILE}`);
 });

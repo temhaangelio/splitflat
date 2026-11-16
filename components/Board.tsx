@@ -19,6 +19,7 @@ import {
   type Shared,
 } from "@/lib/board";
 import {
+  BRAND,
   browserLang,
   describeWeather,
   STRINGS,
@@ -622,7 +623,7 @@ export default function Board() {
             )}
             <div className="flex max-w-[26rem] flex-col gap-[2vmin] text-center text-ink sm:text-left">
               <p className="text-[clamp(.65rem,1.5vmin,.9rem)] font-semibold tracking-[.42em] text-muted">
-                SPLITFLAT
+                {BRAND}
               </p>
               <h1 className="text-[clamp(1.5rem,4.4vmin,2.8rem)] leading-tight font-bold tracking-wide">
                 {peeking
