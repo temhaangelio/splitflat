@@ -2,9 +2,12 @@
 # Pi açılırken ekrana akan çekirdek ve sistem yazılarını gizler; açılış
 # boyunca yalnızca Split Flap görseli görünür.
 #
-# cmdline.txt'ye (tek satır olmalı) eksik olan ayarları ekler, ekranı
-# tty1'den tty3'e taşır ve config.txt'de Raspberry Pi'nin renkli açılış
-# karesini kapatır. Birden çok kez çalıştırmak güvenlidir. İlk değişiklikten
+# cmdline.txt'ye (tek satır olmalı) eksik olan sessiz açılış ayarlarını ekler
+# ve config.txt'de Raspberry Pi'nin renkli açılış karesini kapatır.
+#
+# Konsol tty1'de kalmalıdır. FullPageOS'un açılış görseli (fbi) konsola bağlı
+# çalışır; konsol başka ekrana (tty3) taşınınca grafik ekran (X) açılamıyor,
+# Pi açılış görselinde takılı kalıyordu. Eski bir sürüm taşıdıysa geri alınır. Birden çok kez çalıştırmak güvenlidir. İlk değişiklikten
 # önceki dosya cmdline.txt.orig olarak saklanır: bir sorun olursa SD kartı
 # bilgisayara takıp o dosyayı cmdline.txt adıyla geri koymak yeterlidir.
 #
@@ -37,8 +40,8 @@ case "$line" in
     ;;
 esac
 
-# Yazılar ekran yerine görünmeyen 3. konsola gitsin.
-line="$(printf '%s' "$line" | sed -E 's/(^| )console=tty1( |$)/\1console=tty3\2/')"
+# Eski sürümün tty3'e taşıdığı konsolu tty1'e geri al (yukarıya bakın).
+line="$(printf '%s' "$line" | sed -E 's/(^| )console=tty3( |$)/\1console=tty1\2/')"
 # Var olan loglevel değerini kaldır; aşağıda 0 olarak eklenir.
 line="$(printf '%s' "$line" | sed -E 's/(^| )loglevel=[0-9]+//g')"
 
