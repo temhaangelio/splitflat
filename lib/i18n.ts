@@ -56,6 +56,7 @@ export const STRINGS = {
     pairMoreTitle: "Telefon eklemek için okutun",
     pairMoreText:
       "Bu kod birazdan kaybolur. Eşleşmiş telefonlar etkilenmez; yeniden görmek için panoyu kapatıp açın ya da ekrana dokunun.",
+    pairAddress: "Panonun adresi",
     pairUnavailableTitle: "Telefon bağlantısı hazır değil",
     pairUnavailable:
       "Bu sitede telefon bağlantısı için gereken sunucu deposu henüz kurulmamış. Kurulunca burada bir eşleştirme kodu görünecek.",
@@ -105,6 +106,20 @@ export const STRINGS = {
       "Tüm telefonların eşleşmesi kaldırılacak ve panoda yeni bir kod görünecek. Notlarınız panoda kalır. Devam edilsin mi?",
     phoneForget: "BU TELEFONU UNUT",
     phoneForgetConfirm: "Bu telefonun panoyla eşleşmesi kaldırılsın mı?",
+    resetSection: "SIFIRLA",
+    resetContent: "İÇERİĞİ SIFIRLA",
+    resetContentConfirm:
+      "Bütün notlar silinecek ve ayarlar varsayılana dönecek. Eşleşme ve WiFi değişmez. Devam edilsin mi?",
+    resetWifi: "WIFI AYARINI SIFIRLA",
+    resetWifiConfirm:
+      "Pano bağlı olduğu WiFi ağını unutacak ve kendi kurulum ağını açacak. Bu telefonun panoyla bağlantısı kopacak; yeni ağı panonun ekranındaki adımlarla seçersiniz. Devam edilsin mi?",
+    resetAll: "TÜMÜNÜ SIFIRLA",
+    resetAllConfirm:
+      "Notlar, ayarlar, bütün telefonların eşleşmesi ve WiFi ayarı silinecek; pano ilk günkü haline dönecek. Devam edilsin mi?",
+    resetWifiSent:
+      "Pano WiFi ağını unutuyor ve kurulum ağını açıyor. Bu sayfa birazdan bağlantıyı kaybedecek; panonun ekranındaki adımları izleyin.",
+    resetWifiUnsupported: "Bu cihazda WiFi ayarı buradan değiştirilemiyor.",
+    resetFailed: "Sıfırlanamadı. Bağlantınızı kontrol edip tekrar deneyin.",
 
     /* ----- internet kurulumu ----- */
     wifiTitle: "İnternete bağlayalım",
@@ -169,6 +184,7 @@ export const STRINGS = {
     pairMoreTitle: "Scan to add a phone",
     pairMoreText:
       "This code disappears shortly. Paired phones aren't affected; to see it again, restart the board or touch the screen.",
+    pairAddress: "Board address",
     pairUnavailableTitle: "Phone link isn't ready",
     pairUnavailable:
       "The server storage needed for the phone link hasn't been set up on this site yet. A pairing code will appear here once it is.",
@@ -217,6 +233,20 @@ export const STRINGS = {
       "Every phone will be unpaired and the board will show a new code. Your notes stay on the board. Continue?",
     phoneForget: "FORGET THIS PHONE",
     phoneForgetConfirm: "Unpair this phone from the board?",
+    resetSection: "RESET",
+    resetContent: "RESET CONTENT",
+    resetContentConfirm:
+      "All notes will be deleted and settings will return to their defaults. Pairing and WiFi stay as they are. Continue?",
+    resetWifi: "RESET WIFI",
+    resetWifiConfirm:
+      "The board will forget its WiFi network and open its own setup network. This phone will lose its connection to the board; you'll choose the new network by following the steps on the board's screen. Continue?",
+    resetAll: "RESET EVERYTHING",
+    resetAllConfirm:
+      "Notes, settings, every phone's pairing and the WiFi setting will be deleted; the board goes back to how it was on day one. Continue?",
+    resetWifiSent:
+      "The board is forgetting its WiFi network and opening the setup network. This page will lose its connection shortly; follow the steps on the board's screen.",
+    resetWifiUnsupported: "WiFi can't be changed from here on this device.",
+    resetFailed: "Couldn't reset. Check your connection and try again.",
 
     wifiTitle: "Let's get online",
     wifiJoinText: "The board needs to get online. Scan this code with your phone; it will join the board's setup network.",

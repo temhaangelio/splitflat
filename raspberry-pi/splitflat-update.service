@@ -1,0 +1,11 @@
+# Otomatik güncellemeyi bir kez çalıştırır; splitflat-update.timer tetikler.
+[Unit]
+Description=Split Flap otomatik güncelleme
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=/bin/bash __DIR__/raspberry-pi/auto-update.sh

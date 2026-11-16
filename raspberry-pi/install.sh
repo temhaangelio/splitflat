@@ -13,6 +13,7 @@
 #   4. Pi açılırken ekrana akan sistem yazılarını gizler.
 #   5. Pi bir ağa bağlanamazsa kendi kurulum ağını açabilsin diye sunucuya
 #      yalnızca nmcli için izin verir (bkz. wifi.ts).
+#   6. GitHub'a beş dakikada bir bakan otomatik güncellemeyi açar.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -61,6 +62,9 @@ fi
 
 echo "==> Açılış yazıları"
 bash "$DIR/quiet-boot.sh"
+
+echo "==> Otomatik güncelleme"
+bash "$DIR/auto-update-setup.sh"
 
 echo
 echo "Kurulum bitti. Pi'yi yeniden başlatın:  sudo reboot"

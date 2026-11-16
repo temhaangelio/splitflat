@@ -252,6 +252,32 @@ export function fromSetupNetwork(address: string) {
   return ip.startsWith(prefix);
 }
 
+/**
+ * Telefondan istenen sıfırlama: Pi bağlı olduğu ağı unutur ve kurulum ağını
+ * açar. İsteği gönderen telefonun yanıtı alabilmesi için kısa bir süre beklenir;
+ * ağ değişince telefonun bağlantısı kopar.
+ */
+export function requestForget(): string | null {
+  if (state.mode === "unsupported") return "unsupported";
+  if (busy || state.mode === "setup" || state.mode === "connecting") return "busy";
+  busy = true;
+  const con = state.ssid;
+  setTimeout(async () => {
+    try {
+      if (con) await nmcli(["con", "delete", "id", con]).catch(() => {});
+      setupPassword = "";
+      state.error = undefined;
+      await openSetup();
+    } catch (e) {
+      console.error("WiFi sıfırlanamadı:", e);
+    } finally {
+      busy = false;
+    }
+  }, 1500);
+  console.log(`WiFi sıfırlanıyor${con ? `: ${con} unutulacak` : ""}`);
+  return null;
+}
+
 export function requestConnect(ssid: unknown, password: unknown): string | null {
   if (state.mode !== "setup" || busy) return "not_in_setup";
   if (typeof ssid !== "string" || !ssid || Buffer.byteLength(ssid) > 32) return "bad_ssid";

@@ -688,6 +688,18 @@ export default function Board() {
                       ? t.pairOffline
                       : t.pairText}
               </p>
+              {/* Ağdaysa panonun ev ağındaki adresi: telefonda elle açmak ya da
+                  modemde sabit IP ayırmak için. Anahtar yazılmaz. */}
+              {peeking && wifi?.mode !== "setup" && origin && !/\/\/(localhost|127\.)/.test(origin) && (
+                <p className="mt-[1vmin] flex flex-col gap-[.6vmin]">
+                  <span className="text-[clamp(.6rem,1.3vmin,.8rem)] font-semibold tracking-[.32em] text-muted uppercase">
+                    {t.pairAddress}
+                  </span>
+                  <span className="font-mono text-[clamp(1.1rem,3vmin,1.9rem)] font-bold tracking-wide">
+                    {origin.replace(/^https?:\/\//, "")}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </div>

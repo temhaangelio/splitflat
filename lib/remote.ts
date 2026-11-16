@@ -113,6 +113,24 @@ export async function rotateBoard(pair: Pair, next: Pair): Promise<number> {
   return r.body.v as number;
 }
 
+/**
+ * Pi'nin WiFi ayarını sıfırlar: Pi ağı unutur ve kurulum ağını açar.
+ * `alsoBoard` ile pano kaydı da silinir (tümünü sıfırla).
+ */
+export async function forgetWifi(pair: Pair, alsoBoard: boolean): Promise<void> {
+  const res = await fetch("/api/wifi/forget", {
+    method: "POST",
+    headers: { "x-board-id": pair.id, "x-board-key": pair.key, "Content-Type": "application/json" },
+    body: JSON.stringify({ board: alsoBoard }),
+    cache: "no-store",
+    referrerPolicy: "no-referrer",
+  });
+  if (res.status !== 202) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new RemoteError(body.error ?? "error", res.status);
+  }
+}
+
 export async function deleteBoard(pair: Pair): Promise<void> {
   const r = await call("DELETE", pair);
   if (r.status !== 200 && r.status !== 404) throw fail(r);

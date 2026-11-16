@@ -19,6 +19,7 @@ import { BRAND, LANGS, STRINGS, upper } from "@/lib/i18n";
 import {
   createBoard,
   deleteBoard,
+  forgetWifi,
   pairUrl,
   parsePair,
   readBoard,
@@ -51,6 +52,8 @@ export default function Remote() {
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Sıfırlama sonucu: WiFi sıfırlandıysa telefonun bağlantısı kopacak.
+  const [resetNote, setResetNote] = useState<"" | "wifi" | "failed" | "unsupported">("");
   const version = useRef(0);
   // Kod az önce okutuldu: pano sunucuda henüz yoksa bu telefon oluşturur.
   const fresh = useRef(false);
@@ -177,6 +180,30 @@ export default function Remote() {
       forgetLocally();
     } catch {
       setOffline(true);
+    }
+  };
+
+  /** Notları siler, ayarları varsayılana döndürür; eşleşme ve WiFi kalır. */
+  const resetContent = () => {
+    if (!data || !window.confirm(t.resetContentConfirm)) return;
+    void change(defaultShared(data.lang));
+  };
+
+  /** Pi ağı unutur ve kurulum ağını açar; `all` ile pano kaydı da silinir. */
+  const resetWifi = async (all: boolean) => {
+    if (!pair || !window.confirm(all ? t.resetAllConfirm : t.resetWifiConfirm)) return;
+    try {
+      await forgetWifi(pair, all);
+      setResetNote("wifi");
+      if (all) {
+        try {
+          localStorage.removeItem(PAIR_KEY);
+        } catch {
+          // depolama kapalı
+        }
+      }
+    } catch (e) {
+      setResetNote(e instanceof RemoteError && e.status === 501 ? "unsupported" : "failed");
     }
   };
 
@@ -456,6 +483,33 @@ export default function Remote() {
                     {t.phoneForget}
                   </button>
                 </div>
+              </Section>
+
+              <Section title={t.resetSection}>
+                {resetNote === "wifi" ? (
+                  <p role="status" className="mt-2 text-sm leading-relaxed">
+                    {t.resetWifiSent}
+                  </p>
+                ) : (
+                  <>
+                    <div className="mt-3 flex flex-col gap-2">
+                      <button type="button" className={quiet} onClick={resetContent}>
+                        {t.resetContent}
+                      </button>
+                      <button type="button" className={quiet} onClick={() => void resetWifi(false)}>
+                        {t.resetWifi}
+                      </button>
+                      <button type="button" className={quiet} onClick={() => void resetWifi(true)}>
+                        {t.resetAll}
+                      </button>
+                    </div>
+                    {resetNote && (
+                      <p role="alert" className="mt-2 text-xs leading-relaxed text-ink">
+                        {resetNote === "unsupported" ? t.resetWifiUnsupported : t.resetFailed}
+                      </p>
+                    )}
+                  </>
+                )}
               </Section>
             </div>
           </>

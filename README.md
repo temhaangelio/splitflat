@@ -8,7 +8,7 @@ A split-flap board for your home. It runs on a Raspberry Pi: the attached screen
 
 - **Pano (`/`)** yalnızca gösterir: ekranda düğme, ayar ya da not kutusu yoktur. Sayfanın tamamını kaplar (12 × 5 hücre).
 - Eşleşmiş bir telefon yoksa pano bir **QR kod** gösterir. Aynı WiFi'deki telefon kodu okutunca **kumanda (`/remote`)** açılır ve pano eşleşir. Pano açılışta ve ekrana dokununca kodu kısa süre yeniden gösterir.
-- Her şey telefondan yapılır: notlar (20'ye kadar), saat ve tarih, hava durumu ve şehri, geri sayım, geçiş süresi, kart sesi, pano dili, başka telefon ekleme ve eşleşmeyi sıfırlama.
+- Her şey telefondan yapılır: notlar (20'ye kadar), saat ve tarih, hava durumu ve şehri, geri sayım, geçiş süresi, kart sesi, pano dili, başka telefon ekleme, eşleşmeyi sıfırlama ve **Sıfırla** bölümü (aşağıda).
 - Bulut yok. Pi'deki küçük bir Node.js sunucusu siteyi sunar ve pano kaydını `~/.splitflat/boards.json` dosyasında tutar. İnternet yalnızca hava durumu için kullanılır (seçilen şehrin adı [Open-Meteo](https://open-meteo.com)'ya gider).
 
 ## Raspberry Pi'ye kurulum
@@ -27,8 +27,9 @@ sudo reboot
 2. Sunucuyu `splitflat` adlı bir servis olarak kurar; Pi açılınca kendiliğinden başlar, çökerse yeniden başlar.
 3. FullPageOS varsa açılış adresini `http://localhost:8080/?lite` yapar, Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS logosunu Split Flap açılış görseliyle değiştirir.
 4. Pi açılırken ekrana akan sistem yazılarını gizler (`quiet-boot.sh`). Önceki ayar `cmdline.txt.orig` olarak saklanır; bir sorun olursa SD kartı bilgisayara takıp o dosyayı `cmdline.txt` adıyla geri koymak yeterlidir.
+5. Otomatik güncellemeyi açar (aşağıda).
 
-Pi açılınca ekranda QR görünür; telefonla okutun.
+Pi açılınca ekranda QR görünür; telefonla okutun. Eşleştikten sonra açılışta ve ekrana dokununca kısa süre görünen kodun yanında panonun ev ağındaki adresi de yazar (ör. `192.168.1.50:8080`).
 
 ### İnternet kurulumu (ağ yoksa)
 
@@ -42,13 +43,32 @@ Pi kurulum ağını kapatıp seçilen ağa geçer. Bağlanamazsa kurulum ağın�
 
 WiFi'yi NetworkManager (`nmcli`) yönetir; `install.sh` sunucuya yalnızca `nmcli` için şifresiz `sudo` izni verir (`/etc/sudoers.d/splitflat-nmcli`). Kurulum isteği yalnızca kurulum ağındaki cihazlardan ve yalnızca kurulum modundayken kabul edilir.
 
-**Güncelleme:**
+### Sıfırla (telefonda)
+
+| Düğme | Ne yapar |
+|---|---|
+| İçeriği sıfırla | Notları ve ayarları ilk haline döndürür; eşleşme ve WiFi kalır. |
+| WiFi ayarını sıfırla | Pi bağlı olduğu ağı unutur ve **Split Flap Kurulum** ağını açar; yeni ağ ekrandaki adımlarla seçilir. Notlar ve eşleşme kalır. |
+| Tümünü sıfırla | WiFi'ye ek olarak pano kaydını siler; ağ seçildikten sonra pano yeni bir eşleştirme kodu gösterir. |
+
+WiFi sıfırlandıktan sonra telefon panoya ulaşamaz; ekrandaki kurulum adımlarını izleyin.
+
+### Güncelleme
+
+Pi, GitHub'a açılıştan iki dakika sonra ve sonra beş dakikada bir bakar; yeni bir commit varsa `update.sh`'ı kendisi çalıştırır (`splitflat-update.timer`). Yani `git push` sonrası en geç birkaç dakikada pano yeni sürüme geçer. İnternet yoksa sessizce bekler; Pi'deki kopyada elle değişiklik varsa dokunmaz.
 
 ```bash
-bash ~/splitflat/raspberry-pi/update.sh
+journalctl -u splitflat-update        # otomatik güncelleme günlüğü
+bash ~/splitflat/raspberry-pi/update.sh   # beklemeden elle güncelle
 ```
 
-Notlar `~/.splitflat` altında durur; güncelleme onlara dokunmaz.
+Kapatmak için:
+
+```bash
+touch ~/.splitflat/no-auto-update && sudo systemctl disable --now splitflat-update.timer
+```
+
+Notlar `~/.splitflat` altında durur; güncelleme onlara dokunmaz. Pi yalnızca depodaki derlenmiş dosyaları alır, bu yüzden göndermeden önce `npm run release` çalıştırılmalıdır.
 
 **Bilmeniz gerekenler**
 
@@ -84,7 +104,7 @@ npm run release      # siteyi ve sunucuyu raspberry-pi/ altına derler
 git add -A && git commit && git push
 ```
 
-Ardından Pi'de `update.sh`.
+Pi birkaç dakika içinde kendisi günceller.
 
 ## Güvenlik
 
@@ -103,6 +123,8 @@ Ardından Pi'de `update.sh`.
 | `components/About.tsx` | Hakkında sayfası (`/about`) |
 | `raspberry-pi/server.ts` | Pi sunucusu: site dosyaları ve `/api/board` |
 | `raspberry-pi/install.sh`, `update.sh`, `splitflat.service` | Pi kurulumu |
+| `raspberry-pi/auto-update.sh`, `splitflat-update.timer` | Otomatik güncelleme |
+| `raspberry-pi/wifi.ts` | İnternet kurulumu ve WiFi sıfırlama |
 | `lib/board.ts` | Ortak tanımlar, sınırlar ve veri doğrulama |
 | `lib/remote.ts` | API istemcisi |
 | `lib/i18n.ts`, `lib/about.ts` | Türkçe ve İngilizce metinler |

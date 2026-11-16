@@ -247,6 +247,27 @@ function fromSetupNetwork(address) {
   const prefix = state.setup.address.split(".").slice(0, 3).join(".") + ".";
   return ip.startsWith(prefix);
 }
+function requestForget() {
+  if (state.mode === "unsupported") return "unsupported";
+  if (busy || state.mode === "setup" || state.mode === "connecting") return "busy";
+  busy = true;
+  const con = state.ssid;
+  setTimeout(async () => {
+    try {
+      if (con) await nmcli(["con", "delete", "id", con]).catch(() => {
+      });
+      setupPassword = "";
+      state.error = void 0;
+      await openSetup();
+    } catch (e) {
+      console.error("WiFi s\u0131f\u0131rlanamad\u0131:", e);
+    } finally {
+      busy = false;
+    }
+  }, 1500);
+  console.log(`WiFi s\u0131f\u0131rlan\u0131yor${con ? `: ${con} unutulacak` : ""}`);
+  return null;
+}
 function requestConnect(ssid, password) {
   if (state.mode !== "setup" || busy) return "not_in_setup";
   if (typeof ssid !== "string" || !ssid || Buffer.byteLength(ssid) > 32) return "bad_ssid";
@@ -455,6 +476,23 @@ async function wifi(req, res, url) {
     const body = await readBody(req);
     const error = requestConnect(body?.ssid, body?.password);
     if (error) return fail(res, error === "not_in_setup" ? 409 : 400, error);
+    return json(res, 202, { ok: true });
+  }
+  if (url.pathname === "/api/wifi/forget" && req.method === "POST") {
+    const address = req.socket.remoteAddress ?? "";
+    if (!withinLimit(address)) return fail(res, 429, "rate_limited");
+    const id = header(req, "x-board-id");
+    const key = header(req, "x-board-key");
+    const rec = id && boards.get(digest(id));
+    if (!id || !key || !rec) return fail(res, 404, "not_found");
+    if (!sameDigest(rec.w, digest(key))) return fail(res, 403, "forbidden");
+    const body = await readBody(req);
+    const error = requestForget();
+    if (error) return fail(res, error === "unsupported" ? 501 : 409, error);
+    if (body?.board === true) {
+      boards.delete(digest(id));
+      save();
+    }
     return json(res, 202, { ok: true });
   }
   return fail(res, 404, "not_found");

@@ -23,7 +23,14 @@ import { homedir, networkInterfaces } from "node:os";
 import { dirname, extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseShared, type Shared } from "../lib/board";
-import { fromSetupNetwork, requestConnect, setupPageOpened, startWifi, wifiState } from "./wifi";
+import {
+  fromSetupNetwork,
+  requestConnect,
+  requestForget,
+  setupPageOpened,
+  startWifi,
+  wifiState,
+} from "./wifi";
 
 const PORT = Number(process.env.PORT) || 8080;
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -218,6 +225,8 @@ function lanOrigin() {
 //
 //   GET   /api/wifi           internet kurulumunun durumu (pano ve telefon sorar)
 //   POST  /api/wifi/connect   seçilen ağa bağlan (yalnızca kurulum ağındaki telefondan)
+//   POST  /api/wifi/forget    ağı unut, kurulum ağını aç (yalnızca eşleşmiş telefondan;
+//                             { board: true } ile pano kaydı da silinir)
 
 const isLocal = (req: IncomingMessage) =>
   ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress ?? "");
@@ -241,6 +250,25 @@ async function wifi(req: IncomingMessage, res: ServerResponse, url: URL) {
     const body = await readBody(req);
     const error = requestConnect(body?.ssid, body?.password);
     if (error) return fail(res, error === "not_in_setup" ? 409 : 400, error);
+    return json(res, 202, { ok: true });
+  }
+  if (url.pathname === "/api/wifi/forget" && req.method === "POST") {
+    // Pi'nin ağ ayarına dokunduğu için yalnızca panoya yazma yetkisi olan
+    // (eşleşmiş) bir telefon isteyebilir.
+    const address = req.socket.remoteAddress ?? "";
+    if (!withinLimit(address)) return fail(res, 429, "rate_limited");
+    const id = header(req, "x-board-id");
+    const key = header(req, "x-board-key");
+    const rec = id && boards.get(digest(id));
+    if (!id || !key || !rec) return fail(res, 404, "not_found");
+    if (!sameDigest(rec.w, digest(key))) return fail(res, 403, "forbidden");
+    const body = await readBody(req);
+    const error = requestForget();
+    if (error) return fail(res, error === "unsupported" ? 501 : 409, error);
+    if (body?.board === true) {
+      boards.delete(digest(id));
+      save();
+    }
     return json(res, 202, { ok: true });
   }
   return fail(res, 404, "not_found");
