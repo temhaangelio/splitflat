@@ -25,7 +25,7 @@ sudo reboot
 
 1. Node.js yoksa kurar (`apt install nodejs`).
 2. Sunucuyu `splitflat` adlı bir servis olarak kurar; Pi açılınca kendiliğinden başlar, çökerse yeniden başlar.
-3. FullPageOS varsa açılış adresini `http://localhost:8080/?lite` yapar, Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS logosunu Split Flap açılış görseliyle değiştirir.
+3. FullPageOS varsa tarayıcının açılışta `raspberry-pi/boot.html` sayfasını açmasını sağlar (`kiosk.sh`). Bu sayfa diskten hemen açılır, hareketli logoyu gösterir ve Split Flap sunucusu hazır olunca panoya (`http://localhost:8080/?lite`) geçer. Sunucu bir dakika içinde başlamazsa ekranda ne yapılacağı yazar. Ayrıca Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS logosunu Split Flap açılış görseliyle değiştirir.
 4. Pi açılırken ekrana akan sistem yazılarını gizler (`quiet-boot.sh`). Önceki ayar `cmdline.txt.orig` olarak saklanır; bir sorun olursa SD kartı bilgisayara takıp o dosyayı `cmdline.txt` adıyla geri koymak yeterlidir.
 5. Otomatik güncellemeyi açar (aşağıda).
 
@@ -123,6 +123,7 @@ Pi yaklaşık bir dakika içinde kendisi günceller.
 | `components/About.tsx` | Hakkında sayfası (`/about`) |
 | `raspberry-pi/server.ts` | Pi sunucusu: site dosyaları ve `/api/board` |
 | `raspberry-pi/install.sh`, `update.sh`, `splitflat.service` | Pi kurulumu |
+| `raspberry-pi/boot.html`, `kiosk.sh` | Açılışta hareketli yükleniyor sayfası |
 | `raspberry-pi/auto-update.sh`, `splitflat-update.timer` | Otomatik güncelleme |
 | `raspberry-pi/wifi.ts` | İnternet kurulumu ve WiFi sıfırlama |
 | `lib/board.ts` | Ortak tanımlar, sınırlar ve veri doğrulama |

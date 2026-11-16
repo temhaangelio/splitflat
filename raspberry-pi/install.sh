@@ -7,9 +7,10 @@
 # Yaptıkları:
 #   1. Node.js yoksa kurar.
 #   2. Sunucuyu açılışta başlayan bir servis olarak kurar ve başlatır.
-#   3. FullPageOS varsa, panonun açılışta bu sunucuyu göstermesini sağlar,
-#      Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS
-#      logosunu Split Flap açılış görseliyle değiştirir.
+#   3. FullPageOS varsa, tarayıcının açılışta hareketli bir yükleniyor
+#      sayfası (boot.html) gösterip sunucu hazır olunca panoya geçmesini
+#      sağlar, Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve
+#      FullPageOS logosunu Split Flap açılış görseliyle değiştirir (kiosk.sh).
 #   4. Pi açılırken ekrana akan sistem yazılarını gizler.
 #   5. Pi bir ağa bağlanamazsa kendi kurulum ağını açabilsin diye sunucuya
 #      yalnızca nmcli için izin verir (bkz. wifi.ts).
@@ -38,27 +39,22 @@ sudo systemctl enable --now splitflat
 sudo systemctl restart splitflat
 
 echo "==> Sunucu yanıt veriyor mu"
-for _ in $(seq 1 20); do
-  if curl -fs "http://localhost:$PORT/" >/dev/null; then echo "tamam"; break; fi
+up=""
+for _ in $(seq 1 30); do
+  if curl -fs "http://localhost:$PORT/" >/dev/null; then up=1; echo "tamam"; break; fi
   sleep 1
 done
-
-URL_FILE=/boot/firmware/fullpageos.txt
-[ -f "$URL_FILE" ] || URL_FILE=/boot/fullpageos.txt
-if [ -f "$URL_FILE" ]; then
-  echo "==> FullPageOS: panonun adresi"
-  echo "http://localhost:$PORT/?lite" | sudo tee "$URL_FILE" >/dev/null
-  cat "$URL_FILE"
-
-  START=/opt/custompios/scripts/start_chromium_browser
-  if [ -f "$START" ] && ! grep -q -- "--no-memcheck" "$START"; then
-    echo "==> FullPageOS: bellek uyarısı kapatılıyor"
-    sudo sed -i 's/^   --kiosk$/   --kiosk\n   --no-memcheck/' "$START"
-  fi
-
-  echo "==> FullPageOS: açılış görseli"
-  bash "$DIR/splash.sh"
+if [ -z "$up" ]; then
+  echo
+  echo "!!! Split Flap sunucusu başlamadı. Son günlük satırları:"
+  journalctl -u splitflat -n 25 --no-pager || true
+  echo "!!! Bu çıktıyı gönderin. Node.js sürümü: $(node --version 2>/dev/null || echo yok)"
+  echo
 fi
+
+echo "==> FullPageOS: açılış sayfası ve görsel"
+bash "$DIR/kiosk.sh"
+bash "$DIR/splash.sh"
 
 echo "==> Açılış yazıları"
 bash "$DIR/quiet-boot.sh"

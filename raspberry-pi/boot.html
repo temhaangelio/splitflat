@@ -1,0 +1,108 @@
+<!doctype html>
+<!--
+  Pi açılırken tarayıcının ilk açtığı sayfa (kiosk.sh FullPageOS'a bunu verir).
+  Diskten yüklendiği için sunucuyu beklemez: tarayıcı açılır açılmaz hareketli
+  logo görünür. Pano sunucusu yanıt verince panoya geçer. Bir dakika içinde
+  yanıt gelmezse ekranda ne yapılacağı yazar; ekran takılmış gibi durmaz.
+  Pi Zero için hafif: yalnızca transform/opacity canlandırılır.
+-->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Split Flap</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b0b; color: #ececec; overflow: hidden; cursor: none;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  main { height: 100%; display: grid; place-items: center; align-content: center; gap: 6vmin; }
+  .logo { display: flex; gap: .09em; font-size: min(6.6vw, 11vh); }
+  .tile { position: relative; width: .86em; height: 1.3em; background: #1d1d1d; overflow: hidden;
+    box-shadow: 0 0 0 .04em #040404; }
+  .tile::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - 1px); height: 2px;
+    background: #000; z-index: 3; }
+  .tile .b { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #161616; }
+  .tile .ch { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700;
+    font-size: .8em; line-height: 1; z-index: 1; }
+  /* Düşen yaprak: üst yarı menteşeye doğru katlanır. Sırayla, dalga gibi. */
+  .tile .flap { position: absolute; left: 0; right: 0; top: 0; height: 50%; background: #262626;
+    transform-origin: bottom; transform: scaleY(0); z-index: 2;
+    animation: flap 2.2s cubic-bezier(.5, 0, .9, .6) infinite; animation-delay: calc(var(--i) * 110ms); }
+  @keyframes flap {
+    0% { transform: scaleY(1); }
+    9% { transform: scaleY(0); }
+    100% { transform: scaleY(0); }
+  }
+  .status { display: flex; align-items: center; gap: 2vmin; font-size: 2.4vmin; color: #8a8a8a;
+    letter-spacing: .3em; text-transform: uppercase; min-height: 3vmin; }
+  .dots { display: inline-flex; gap: 1vmin; }
+  .dots i { width: 1.1vmin; height: 1.1vmin; border-radius: 50%; background: #ececec; opacity: .2;
+    animation: dot 1.2s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; }
+  .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 50% { opacity: 1; } }
+  .help { max-width: 70vmin; text-align: center; font-size: 2.3vmin; line-height: 1.6; color: #8a8a8a; }
+  .help code { color: #ececec; font-family: ui-monospace, Menlo, monospace; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo" aria-label="Split Flap"></div>
+  <p class="status"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span id="label">Yükleniyor</span></p>
+  <p class="help" id="help" hidden></p>
+</main>
+<script>
+  // Panonun adresi: kiosk.sh bunu #'den sonra verir; yoksa varsayılan.
+  var target = decodeURIComponent(location.hash.slice(1)) || "http://localhost:8080/?lite";
+  var origin = target.replace(/^(https?:\/\/[^/]+).*$/, "$1");
+  var en = (navigator.language || "").slice(0, 2) !== "tr";
+
+  var logo = document.querySelector(".logo");
+  "SPLIT FLAP".split("").forEach(function (c, i) {
+    var t = document.createElement("span");
+    t.className = "tile";
+    t.style.setProperty("--i", i);
+    t.innerHTML = '<span class="b"></span><span class="ch"></span><span class="flap"></span>';
+    t.querySelector(".ch").textContent = c === " " ? "" : c;
+    logo.appendChild(t);
+  });
+
+  var label = document.getElementById("label");
+  var help = document.getElementById("help");
+  if (en) label.textContent = "Loading";
+  var started = Date.now();
+
+  function waiting() {
+    var s = Math.round((Date.now() - started) / 1000);
+    if (s < 60) return;
+    label.textContent = en ? "Waiting for the board server" : "Pano sunucusu bekleniyor";
+    help.hidden = false;
+    help.innerHTML = en
+      ? "The Split Flap server hasn't started yet. Connect to the Pi and run <code>sudo systemctl status splitflat</code>. If it isn't installed: <code>bash ~/splitflat/raspberry-pi/install.sh</code>"
+      : "Split Flap sunucusu hâlâ başlamadı. Pi'ye bağlanıp <code>sudo systemctl status splitflat</code> çalıştırın. Kurulu değilse: <code>bash ~/splitflat/raspberry-pi/install.sh</code>";
+  }
+
+  // Sunucu ayakta mı? Bu sayfa diskten (file://) açıldığı için sunucuya istek
+  // atmak tarayıcı kurallarına takılabilir; resim yüklemek her zaman serbesttir.
+  // Sunucunun küçük simgesi gelirse sunucu ayaktadır.
+  function check() {
+    var img = new Image();
+    var done = false;
+    var next = function () {
+      if (done) return;
+      done = true;
+      waiting();
+      setTimeout(check, 1000);
+    };
+    img.onload = function () {
+      done = true;
+      location.replace(target);
+    };
+    img.onerror = next;
+    setTimeout(next, 4000); // yanıt hiç gelmezse
+    img.src = origin + "/apple-icon.png?t=" + Date.now();
+  }
+  check();
+</script>
+</body>
+</html>

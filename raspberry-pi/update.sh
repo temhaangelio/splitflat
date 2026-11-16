@@ -11,7 +11,8 @@ git pull --ff-only
 bash raspberry-pi/wifi-permission.sh
 bash raspberry-pi/auto-update-setup.sh
 sudo systemctl restart splitflat
-# Açılış görseli değiştiyse onu da uygula.
+# Açılış sayfası ve görseli değiştiyse onları da uygula.
+bash raspberry-pi/kiosk.sh
 bash raspberry-pi/splash.sh
 bash raspberry-pi/quiet-boot.sh
 # Panoyu yeni sürümle yeniden yükle (FullPageOS'ta varsa).
