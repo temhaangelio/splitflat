@@ -28,6 +28,7 @@ import {
 } from "@/lib/i18n";
 import {
   newPair,
+  hostOrigin,
   pairUrl,
   parsePair,
   readBoard,
@@ -257,6 +258,8 @@ export default function Board() {
   const [pending, setPending] = useState<Pair | null>(null);
   const [link, setLink] = useState<"checking" | "ready" | "unavailable" | "offline">("checking");
   const [qr, setQr] = useState<string | null>(null);
+  // Kodun taşıdığı adres: Pi'nin ev ağındaki adresi (bkz. hostOrigin).
+  const [origin, setOrigin] = useState<string | null>(null);
   // Eşleşmiş panonun kodu şu kadar süre daha ekranda (0: gizli).
   const [peekMs, setPeekMs] = useState(0);
   const version = useRef(0); // sunucudaki son bilinen sürüm
@@ -397,13 +400,22 @@ export default function Board() {
   const peeking = remote !== null && peekMs > 0;
   const codePair = pending ?? (peeking ? remote : null);
 
+  // Telefonun ulaşacağı adres bir kez öğrenilir.
+  useEffect(() => {
+    void hostOrigin().then(setOrigin);
+  }, []);
+
   // Eşleştirme kodu; kütüphane yalnızca gerektiğinde yüklenir.
   useEffect(() => {
-    if (!codePair) return;
+    if (!codePair || !origin) return;
     let alive = true;
     void import("qrcode")
       .then((QR) =>
-        QR.toDataURL(pairUrl(codePair), { margin: 2, width: 720, errorCorrectionLevel: "M" }),
+        QR.toDataURL(pairUrl(codePair, origin), {
+          margin: 2,
+          width: 720,
+          errorCorrectionLevel: "M",
+        }),
       )
       .then((url) => {
         if (alive) setQr(url);
@@ -411,7 +423,7 @@ export default function Board() {
     return () => {
       alive = false;
     };
-  }, [codePair]);
+  }, [codePair, origin]);
 
   // Eşleşmiş panonun kodu süresi dolunca gizlenir.
   useEffect(() => {

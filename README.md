@@ -1,59 +1,84 @@
 # Splitflat
 
-Havaalanlarındaki ve tren garlarındaki dönen harfli panoları eve getiren bir web uygulaması. Bir ekran pano olur, telefon kumanda: notunuzu gönderin; kartlar tek tek dönerek yerine otursun.
+Havaalanlarındaki ve tren garlarındaki dönen harfli panoları eve getiren bir uygulama. Evdeki bir Raspberry Pi'de çalışır: Pi'ye bağlı ekran pano olur, telefon kumanda. Notunuzu gönderin; kartlar tek tek dönerek yerine otursun.
 
-A split-flap board for your home: a screen is the board, your phone is the remote.
+A split-flap board for your home. It runs on a Raspberry Pi: the attached screen is the board, your phone is the remote.
 
 ## Nasıl çalışır
 
 - **Pano (`/`)** yalnızca gösterir: ekranda düğme, ayar ya da not kutusu yoktur. Sayfanın tamamını kaplar (12 × 5 hücre).
-- Eşleşmiş bir telefon yoksa pano bir **QR kod** gösterir. Kod okutulunca telefonda **kumanda (`/remote`)** açılır ve pano eşleşir.
+- Eşleşmiş bir telefon yoksa pano bir **QR kod** gösterir. Aynı WiFi'deki telefon kodu okutunca **kumanda (`/remote`)** açılır ve pano eşleşir. Pano açılışta ve ekrana dokununca kodu kısa süre yeniden gösterir.
 - Her şey telefondan yapılır: notlar (20'ye kadar), saat ve tarih, hava durumu ve şehri, geri sayım, geçiş süresi, kart sesi, pano dili, başka telefon ekleme ve eşleşmeyi sıfırlama.
-- Pano sunucuyu 7 saniyede bir sorgular ve değişikliği dönerek gösterir.
+- Bulut yok. Pi'deki küçük bir Node.js sunucusu siteyi sunar ve pano kaydını `~/.splitflat/boards.json` dosyasında tutar. İnternet yalnızca hava durumu için kullanılır (seçilen şehrin adı [Open-Meteo](https://open-meteo.com)'ya gider).
 
-Hesap yoktur. Pano durumu sunucuda, panonun rastgele anahtarına bağlı olarak saklanır. Hava durumu açıkken şehir adı [Open-Meteo](https://open-meteo.com)'ya gönderilir.
+## Raspberry Pi'ye kurulum
 
-## Sunucu deposu (gerekli)
+Raspberry Pi OS ya da FullPageOS üzerinde, Pi'ye SSH ile bağlanıp:
 
-Pano içeriği sunucuda tutulduğu için bir Redis deposu **gerekir**; yoksa pano "telefon bağlantısı hazır değil" der ve yalnızca tanıtım notlarını gösterir.
+```bash
+git clone https://github.com/temhaangelio/splitflat.app.git ~/splitflat
+bash ~/splitflat/raspberry-pi/install.sh
+sudo reboot
+```
 
-**Vercel'de kurulum:** proje → Storage → Upstash for Redis → Create. Vercel bağlantı bilgilerini ortam değişkeni olarak ekler; ardından yeniden yayınlayın. Kabul edilen değişkenler:
+`install.sh` şunları yapar:
 
-| Değişken | Alternatif adı |
-|---|---|
-| `KV_REST_API_URL` | `UPSTASH_REDIS_REST_URL` |
-| `KV_REST_API_TOKEN` | `UPSTASH_REDIS_REST_TOKEN` |
+1. Node.js yoksa kurar (`apt install nodejs`).
+2. Sunucuyu `splitflat` adlı bir servis olarak kurar; Pi açılınca kendiliğinden başlar, çökerse yeniden başlar.
+3. FullPageOS varsa açılış adresini `http://localhost:8080/?lite` yapar ve Chromium'un "1 GB'tan az bellek" uyarısını kapatır.
 
-**Yerelde:** değişkenler yoksa `npm run dev` verileri bellekte tutar (sunucu yeniden başlayınca silinir). Gerçek depoyla denemek için `vercel env pull .env.local`.
+Pi açılınca ekranda QR görünür; telefonla okutun.
 
-### Güvenlik
+**Güncelleme:**
 
-- Her panonun tarayıcıda üretilen iki rastgele anahtarı vardır (128 bit): biri okumaya, diğeri yazmaya yetkilidir. Depoda anahtarların kendisi değil SHA-256 özeti durur.
-- Eşleştirme bağlantısında anahtarlar `#` sonrasında durur, isteklerde başlık olarak gider; sunucu günlüklerine düşmez.
-- Pano kaydı, kod ilk okutulduğunda telefon tarafından oluşturulur; okutulmamış bir kod için sunucuda hiçbir şey yoktur.
-- Sunucu her yazmayı doğrular (`lib/board.ts` → `parseShared`) ve IP başına sınırlar: dakikada 30 yazma, 5 yeni pano.
-- "Eşleşmeyi sıfırla" kaydı siler; pano yeni bir kod gösterir ve eski bağlantı geçersiz olur.
-- Depo kullanımı: pano başına ayda yaklaşık 370 bin Redis komutu (Upstash'in ücretsiz katmanı ayda 500 bin).
+```bash
+bash ~/splitflat/raspberry-pi/update.sh
+```
 
-## Zayıf cihazlar ve kiosk
+Notlar `~/.splitflat` altında durur; güncelleme onlara dokunmaz.
 
-- **Hafif görünüm:** tarayıcı 1 GB ve altında bellek bildirdiğinde kendiliğinden açılır; adresin sonuna `?lite` eklenerek de zorlanabilir. Kart çevirme animasyonunu ve ağır görsel katmanları kapatır.
-- **Raspberry Pi:** `raspberry-pi/splash.png`, FullPageOS için açılış görselidir. Kart sesinin dokunmadan çalması için Chromium'a `--autoplay-policy=no-user-gesture-required` verilmelidir.
-- Panoya dokunmak sayfayı tam ekrana geçirir.
+**Bilmeniz gerekenler**
+
+- Telefon panoya yalnızca ev ağındayken ulaşır. QR, Pi'nin ev ağındaki adresini taşır; modemde Pi'ye **sabit IP** ayırın, yoksa adres değişince eşleşmiş telefonlar panoyu bulamaz (yeniden okutmak gerekir).
+- Adres yanlış bulunursa servise `SPLITFLAT_URL=http://192.168.1.50:8080` gibi elle verilebilir (`/etc/systemd/system/splitflat.service` içinde `Environment=`).
+- Ev içinde bağlantı şifrelenmez (http). Bu yüzden telefonda "Bağlantıyı kopyala" panoya kopyalamak yerine bağlantıyı gösterir.
+- **Hafif görünüm:** tarayıcı 1 GB ve altında bellek bildirdiğinde ya da adreste `?lite` varken açılır; kart çevirme animasyonunu ve ağır görsel katmanları kapatır. Zero 2 W için gereklidir.
+- `raspberry-pi/splash.png`: FullPageOS için açılış görseli; önyükleme bölümündeki `splash.png`'nin üzerine kopyalayın.
+
+### Servis komutları
+
+```bash
+sudo systemctl status splitflat     # çalışıyor mu
+journalctl -u splitflat -f          # günlük
+sudo systemctl restart splitflat    # yeniden başlat
+```
 
 ## Geliştirme
 
+Site hazır dosyalar olarak derlenir; Pi bunları derlemez, depodan hazır alır. Bu yüzden derlenmiş çıktılar (`raspberry-pi/site/`, `raspberry-pi/server.mjs`) depoya eklenir.
+
 ```bash
 npm install
-npm run dev
+npm run serve        # Pi sunucusu, 8080'de (pano kaydı burada)
+npm run dev          # ayrı terminalde; /api istekleri 8080'e yönlendirilir
 ```
 
-Ardından <http://localhost:3000>.
+Pi'ye gönderilecek sürümü hazırlamak:
 
 ```bash
 npm run lint
-npm run build
+npm run release      # siteyi ve sunucuyu raspberry-pi/ altına derler
+git add -A && git commit && git push
 ```
+
+Ardından Pi'de `update.sh`.
+
+## Güvenlik
+
+- Her panonun tarayıcıda üretilen iki rastgele anahtarı vardır (128 bit): biri okumaya, diğeri yazmaya yetkilidir. Diskte anahtarların kendisi değil SHA-256 özeti durur.
+- Eşleştirme bağlantısında anahtarlar `#` sonrasında durur, isteklerde başlık olarak gider.
+- Sunucu her yazmayı doğrular (`lib/board.ts` → `parseShared`, sitenin kullandığıyla aynı kod), adres başına dakikada 60 yazmayla sınırlar ve site klasörünün dışına dosya sunmaz.
+- "Eşleşmeyi sıfırla" kaydı siler; pano yeni bir kod gösterir ve eski bağlantı geçersiz olur.
 
 ## Yapı
 
@@ -63,10 +88,11 @@ npm run build
 | `components/FlapCell.tsx` | Tek hücre ve kart çevirme animasyonu |
 | `components/Remote.tsx` | Telefon kumandası (`/remote`) |
 | `components/About.tsx` | Hakkında sayfası (`/about`) |
-| `app/api/board/route.ts` | Pano kaydı API'si |
+| `raspberry-pi/server.ts` | Pi sunucusu: site dosyaları ve `/api/board` |
+| `raspberry-pi/install.sh`, `update.sh`, `splitflat.service` | Pi kurulumu |
 | `lib/board.ts` | Ortak tanımlar, sınırlar ve veri doğrulama |
-| `lib/remote.ts`, `lib/server/` | API istemcisi; depo ve güvenlik yardımcıları |
+| `lib/remote.ts` | API istemcisi |
 | `lib/i18n.ts`, `lib/about.ts` | Türkçe ve İngilizce metinler |
 | `lib/weather.ts`, `lib/sound.ts` | Hava durumu; kart sesi |
 
-Next.js 16, React 19, Tailwind CSS 4.
+Next.js 16, React 19, Tailwind CSS 4, Node.js 18+.

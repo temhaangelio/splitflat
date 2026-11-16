@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Raspberry Pi için derlenmiş çıktılar (npm run release)
+    "raspberry-pi/site/**",
+    "raspberry-pi/server.mjs",
   ]),
 ]);
 

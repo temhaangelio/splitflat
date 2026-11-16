@@ -2,7 +2,7 @@ import type { Lang } from "@/lib/i18n";
 
 // Hakkında sayfasının metinleri. "Verileriniz" bölümü uygulamanın gerçekte ne
 // yaptığını anlatır; bir servis eklenir ya da çıkarılırsa burası da güncellenmeli
-// (bkz. lib/weather.ts, app/api/board/route.ts).
+// (bkz. lib/weather.ts, raspberry-pi/server.ts).
 
 export type AboutContent = {
   metaTitle: string;
@@ -20,9 +20,9 @@ export const ABOUT: Record<Lang, AboutContent> = {
       {
         title: "Nasıl çalışır",
         body: [
-          "Siteyi pano olacak ekranda açın: bir tablet, eski bir monitör ya da bir Raspberry Pi. Ekranda bir kod görünür.",
-          "Kodu telefonunuzun kamerasıyla okutun. Telefonda panonun kumandası açılır ve ekrandaki kod kaybolur; eşleşme bir kez yapılır, telefon hatırlanır.",
-          "Bundan sonra her şey telefondan: ekranda düğme ya da ayar yoktur, yalnızca gösterir.",
+          "Pano evinizdeki bir Raspberry Pi'de çalışır ve ona bağlı ekranda görünür. Eşleşmiş bir telefon yoksa ekranda bir kod belirir.",
+          "Kodu, panoyla aynı WiFi ağındaki telefonunuzun kamerasıyla okutun. Telefonda panonun kumandası açılır ve ekrandaki kod kaybolur; eşleşme bir kez yapılır, telefon hatırlanır.",
+          "Bundan sonra her şey telefondan: ekranda düğme ya da ayar yoktur, yalnızca gösterir. Telefon panoya yalnızca ev ağındayken ulaşır. Pano açılışta ve ekrana dokununca kodu kısa süre yeniden gösterir; yeni bir telefon eklemek ya da eşleşmesini kaybeden bir telefonu geri bağlamak için.",
         ],
       },
       {
@@ -39,9 +39,9 @@ export const ABOUT: Record<Lang, AboutContent> = {
       {
         title: "Verileriniz",
         body: [
-          "Hesap yok. Panonuzun içeriği (notlar, nelerin gösterileceği, geri sayım, şehir, dil ve ses tercihi) sunucumuzda saklanır ki telefonunuz ve panonuz aynı şeyi görsün. Bunlar adınızla ya da bir hesapla ilişkilendirilmez; yalnızca panonun rastgele üretilmiş anahtarına bağlıdır.",
-          "Kayıt, kodu ilk okuttuğunuzda oluşur; okutmadan önce sunucuda panonuza ait hiçbir şey yoktur. Eşleşmeyi sıfırladığınızda kayıt silinir; bir yıl kullanılmayan kayıtlar da kendiliğinden silinir.",
-          "Eşleştirme kodunu ya da bağlantısını bilen herkes o panoyu okuyabilir ve ona yazabilir. Bağlantıyı yalnızca güvendiğiniz kişilerle paylaşın, panoya şifre gibi gizli bilgiler yazmayın. Bağlantı yanlış birinin eline geçerse telefondan \"Eşleşmeyi sıfırla\" ile eskisini geçersiz kılın.",
+          "Hesap ve bulut yok. Panonuzun içeriği (notlar, nelerin gösterileceği, geri sayım, şehir, dil ve ses tercihi) yalnızca evinizdeki Raspberry Pi'de, bir dosyada saklanır; internete gönderilmez.",
+          "Kayıt, kodu ilk okuttuğunuzda oluşur. Eşleşmeyi sıfırladığınızda silinir; notlar ekranda kalır, yeni bir telefon eşleşince ona aktarılır.",
+          "Ev ağınızdaki ve eşleştirme kodunu ya da bağlantısını bilen herkes panoyu okuyabilir ve ona yazabilir. Ev içinde bağlantı şifrelenmez; panoya şifre gibi gizli bilgiler yazmayın. Bağlantı yanlış birinin eline geçerse telefondan \"Eşleşmeyi sıfırla\" ile eskisini geçersiz kılın.",
           "Hava durumunu açarsanız, seçtiğiniz şehrin adı hava durumu için Open-Meteo'ya gönderilir. Cihazınızın konumu kullanılmaz.",
         ],
       },
@@ -55,9 +55,9 @@ export const ABOUT: Record<Lang, AboutContent> = {
       {
         title: "How it works",
         body: [
-          "Open the site on the screen that will be the board: a tablet, an old monitor or a Raspberry Pi. A code appears on the screen.",
-          "Scan the code with your phone's camera. The board's remote opens on your phone and the code disappears from the screen; you pair once and the phone is remembered.",
-          "From then on everything happens on the phone: the screen has no buttons or settings, it only displays.",
+          "The board runs on a Raspberry Pi in your home and shows on the screen attached to it. When no phone is paired, a code appears on the screen.",
+          "Scan the code with the camera of a phone on the same WiFi network. The board's remote opens on your phone and the code disappears from the screen; you pair once and the phone is remembered.",
+          "From then on everything happens on the phone: the screen has no buttons or settings, it only displays. The phone reaches the board only while it is on your home network. The board shows the code briefly at start-up and when the screen is touched, to add a new phone or bring back one that lost its pairing.",
         ],
       },
       {
@@ -74,9 +74,9 @@ export const ABOUT: Record<Lang, AboutContent> = {
       {
         title: "Your data",
         body: [
-          "There are no accounts. Your board's content (notes, what it shows, the countdown, city, language and sound preference) is stored on our server so that your phone and your board see the same thing. It isn't tied to your name or an account, only to the board's randomly generated key.",
-          "The record is created when you first scan the code; before that, nothing about your board exists on the server. Resetting the pairing deletes the record; records unused for a year are deleted automatically.",
-          "Anyone who has the pairing code or link can read that board and write to it. Share it only with people you trust, and don't put secrets such as passwords on the board. If the link ends up with the wrong person, use \"Reset pairing\" on your phone to make the old one stop working.",
+          "There are no accounts and no cloud. Your board's content (notes, what it shows, the countdown, city, language and sound preference) is stored only in a file on the Raspberry Pi in your home; it is not sent to the internet.",
+          "The record is created when you first scan the code. Resetting the pairing deletes it; the notes stay on the screen and move to the next phone that pairs.",
+          "Anyone on your home network who has the pairing code or link can read the board and write to it. Inside your home the connection is not encrypted, so don't put secrets such as passwords on the board. If the link ends up with the wrong person, use \"Reset pairing\" on your phone to make the old one stop working.",
           "If you turn on weather, the name of the city you chose is sent to Open-Meteo for the forecast. Your device's location is not used.",
         ],
       },

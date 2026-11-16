@@ -5,15 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "release": "next build && rm -rf raspberry-pi/site && cp -R out raspberry-pi/site && npm run bundle",
+    "bundle": "esbuild raspberry-pi/server.ts --bundle --platform=node --format=esm --target=node18 --outfile=raspberry-pi/server.mjs",
+    "serve": "npm run bundle && node raspberry-pi/server.mjs",
     "lint": "eslint"
   },
   "dependencies": {
     "next": "16.4.6",
     "qrcode": "^1.5.4",
     "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "server-only": "^0.0.1"
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
@@ -21,6 +22,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",

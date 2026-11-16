@@ -51,7 +51,7 @@ export const STRINGS = {
     pairTitle: "Telefonunuzla okutun",
     pairText:
       "Kameranızı koda tutun. Açılan sayfadan panoya not gönderir, saati, hava durumunu ve geri sayımı açarsınız.",
-    pairOffline: "Sunucuya ulaşılamıyor. Bağlantı gelince bu kodla eşleşebilirsiniz.",
+    pairOffline: "Pano sunucusuna ulaşılamıyor. Raspberry Pi'deki splitflat servisi çalışıyor mu?",
     // eşleşmiş panoda, açılışta ya da dokununca kısa süre görünen kod
     pairMoreTitle: "Telefon eklemek için okutun",
     pairMoreText:
@@ -68,7 +68,7 @@ export const STRINGS = {
       "Bu telefon bir panoyla eşleşmemiş. Panonun ekranındaki kodu telefonunuzun kamerasıyla okutun.",
     phoneGone:
       "Bu pano artık yok ya da eşleşmesi sıfırlanmış. Panonun ekranındaki yeni kodu okutun.",
-    phoneOffline: "Sunucuya ulaşılamadı. Yeniden deneniyor…",
+    phoneOffline: "Panoya ulaşılamadı. Telefon evin WiFi ağında mı? Yeniden deneniyor…",
     phoneSent: "Panoya gönderildi",
     newNote: "Yeni not",
     phoneAdd: "EKLE",
@@ -134,7 +134,7 @@ export const STRINGS = {
     pairTitle: "Scan with your phone",
     pairText:
       "Point your camera at the code. From the page that opens you can send notes to the board and turn on the time, weather and countdown.",
-    pairOffline: "Can't reach the server. You can pair with this code once the connection is back.",
+    pairOffline: "Can't reach the board server. Is the splitflat service running on the Raspberry Pi?",
     pairMoreTitle: "Scan to add a phone",
     pairMoreText:
       "This code disappears shortly. Paired phones aren't affected; to see it again, restart the board or touch the screen.",
@@ -149,7 +149,7 @@ export const STRINGS = {
       "This phone isn't paired with a board. Scan the code on the board's screen with your phone's camera.",
     phoneGone:
       "This board no longer exists or its pairing was reset. Scan the new code on the board's screen.",
-    phoneOffline: "Couldn't reach the server. Retrying…",
+    phoneOffline: "Couldn't reach the board. Is the phone on your home WiFi? Retrying…",
     phoneSent: "Sent to the board",
     newNote: "New note",
     phoneAdd: "ADD",

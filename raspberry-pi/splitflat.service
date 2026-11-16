@@ -1,0 +1,17 @@
+# Splitflat sunucusu: Pi açılınca başlar, çökerse yeniden başlar.
+# install.sh bu dosyayı kullanıcı adı ve klasöre göre doldurup kurar.
+[Unit]
+Description=Splitflat pano sunucusu
+After=network.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=/usr/bin/env node server.mjs
+Environment=PORT=8080
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

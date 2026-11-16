@@ -431,10 +431,20 @@ export default function Remote() {
                     className={quiet}
                     onClick={() => {
                       if (!pair) return;
-                      void navigator.clipboard?.writeText(pairUrl(pair)).then(() => {
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 1500);
-                      });
+                      const url = pairUrl(pair);
+                      // Ev ağında sayfa şifresiz (http) sunulur; tarayıcılar orada
+                      // panoya kopyalamaya izin vermez. O zaman bağlantı gösterilir.
+                      if (!navigator.clipboard) {
+                        window.prompt(t.shareLink, url);
+                        return;
+                      }
+                      void navigator.clipboard.writeText(url).then(
+                        () => {
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        },
+                        () => window.prompt(t.shareLink, url),
+                      );
                     }}
                   >
                     {copied ? t.shareCopied : t.shareLink}

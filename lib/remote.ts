@@ -20,7 +20,24 @@ export function newKey(): string {
 export const newPair = (): Pair => ({ id: newKey(), key: newKey() });
 
 const PAIR = /^#?([A-Za-z0-9_-]{22})\.([A-Za-z0-9_-]{22})$/;
-export const pairUrl = (p: Pair) => `${location.origin}/remote#${p.id}.${p.key}`;
+/**
+ * Eşleştirme bağlantısı. Pano Pi'de `localhost` üzerinden açıldığı için kendi
+ * adresi telefona bir şey ifade etmez; pano, sunucudan aldığı ev ağı adresini
+ * (`/api/host`) verir.
+ */
+export const pairUrl = (p: Pair, origin = location.origin) => `${origin}/remote#${p.id}.${p.key}`;
+
+/** Sunucunun ev ağındaki adresi; bilinmiyorsa sayfanın kendi adresi. */
+export async function hostOrigin(): Promise<string> {
+  try {
+    const r = await fetch("/api/host", { cache: "no-store" });
+    const body = (await r.json()) as { origin?: unknown };
+    if (typeof body.origin === "string" && /^https?:\/\//.test(body.origin)) return body.origin;
+  } catch {
+    // sunucu adresi bildiremezse aşağıya düşülür
+  }
+  return location.origin;
+}
 export function parsePair(hash: string): Pair | null {
   const m = PAIR.exec(hash);
   return m ? { id: m[1], key: m[2] } : null;

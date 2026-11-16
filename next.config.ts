@@ -1,23 +1,21 @@
 import type { NextConfig } from "next";
 
+// Site hazır dosyalar olarak derlenir (`out/`). Onları ve not deposunu
+// Raspberry Pi'deki küçük sunucu sağlar: raspberry-pi/server.ts.
+//
+// Geliştirirken `next dev` yalnızca sayfaları sunar; /api istekleri, ayrı bir
+// terminalde çalışan aynı sunucuya yönlendirilir (bkz. README).
+const dev = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  // Tüm yanıtlara güvenlik başlıkları. Referrer-Policy özellikle önemli: telefon
-  // eşleştirme sayfasından başka bir siteye geçilirse adres sızmasın.
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: [
-          { key: "Referrer-Policy", value: "no-referrer" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
-        ],
-      },
-    ];
-  },
-  partialPrefetching: true,
+  output: "export",
+  ...(dev
+    ? {
+        async rewrites() {
+          return [{ source: "/api/:path*", destination: "http://127.0.0.1:8080/api/:path*" }];
+        },
+      }
+    : {}),
   turbopack: {
     rules: {
       "*.css": {
