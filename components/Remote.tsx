@@ -35,6 +35,7 @@ import { useLang } from "@/lib/useLang";
 // sunucuya yazılır; pano birkaç saniye içinde alır.
 
 const PAIR_KEY = "splitflat:pair";
+const HOME_HINT_KEY = "splitflat:home-hint"; // "hidden": ipucu kapatıldı
 const POLL_MS = 10_000;
 
 type Status = "loading" | "unpaired" | "gone" | "ready";
@@ -54,6 +55,8 @@ export default function Remote() {
   const [copied, setCopied] = useState(false);
   // Sıfırlama sonucu: WiFi sıfırlandıysa telefonun bağlantısı kopacak.
   const [resetNote, setResetNote] = useState<"" | "wifi" | "failed" | "unsupported">("");
+  // "Ana ekrana ekle" ipucu: hangi telefonun yönergesi gösterilecek.
+  const [homeHint, setHomeHint] = useState<"ios" | "android" | null>(null);
   const version = useRef(0);
   // Kod az önce okutuldu: pano sunucuda henüz yoksa bu telefon oluşturur.
   const fresh = useRef(false);
@@ -154,6 +157,42 @@ export default function Remote() {
       if (isGone(e)) setStatus("gone");
       else setOffline(true);
     }
+  };
+
+  // Ana ekran ipucu: kumanda zaten ana ekrandan açılmadıysa ve kapatılmadıysa.
+  // Ana ekrana eklenen kısayol o anki adresi saklar; iOS'ta ana ekrandaki
+  // uygulamanın tarayıcıdan ayrı bir deposu vardır. Bu yüzden ipucu görünürken
+  // eşleşme adresin `#` kısmına geri konur: kısayol açılınca kendini eşler
+  // (ve adres yine hemen temizlenir).
+  useEffect(() => {
+    if (status !== "ready" || !pair) return;
+    const nav = navigator as Navigator & { standalone?: boolean };
+    let hidden = false;
+    try {
+      hidden = localStorage.getItem(HOME_HINT_KEY) === "hidden";
+    } catch {
+      // depolama kapalıysa ipucu her seferinde görünür
+    }
+    if (hidden || nav.standalone || matchMedia("(display-mode: standalone)").matches) return;
+    const ios =
+      /iPhone|iPad|iPod/.test(nav.userAgent) ||
+      (nav.userAgent.includes("Macintosh") && nav.maxTouchPoints > 1);
+    history.replaceState(null, "", `${location.pathname}#${pair.id}.${pair.key}`);
+    const show = setTimeout(() => setHomeHint(ios ? "ios" : "android"), 0);
+    return () => {
+      clearTimeout(show);
+      history.replaceState(null, "", location.pathname);
+    };
+  }, [status, pair]);
+
+  const hideHomeHint = () => {
+    try {
+      localStorage.setItem(HOME_HINT_KEY, "hidden");
+    } catch {
+      // depolama kapalı
+    }
+    history.replaceState(null, "", location.pathname);
+    setHomeHint(null);
   };
 
   const forgetLocally = () => {
@@ -257,6 +296,27 @@ export default function Remote() {
             >
               {offline ? t.phoneOffline : sent ? t.phoneSent : ""}
             </p>
+
+            {homeHint && (
+              <aside className="mb-6 flex items-start gap-4 border border-edge p-4">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <p className="text-sm font-medium tracking-wide">{t.homeHintTitle}</p>
+                  <p className="text-[14px] leading-relaxed text-muted">
+                    {homeHint === "ios" ? t.homeHintIos : t.homeHintAndroid}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={hideHomeHint}
+                  aria-label={t.homeHintClose}
+                  className={`-m-1 grid size-9 shrink-0 cursor-pointer place-items-center text-muted transition-colors hover:text-ink ${FOCUS}`}
+                >
+                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </aside>
+            )}
 
             <form
               className="flex gap-2"

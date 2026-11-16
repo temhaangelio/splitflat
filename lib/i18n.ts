@@ -105,6 +105,12 @@ export const STRINGS = {
     resetConfirm:
       "Tüm telefonların eşleşmesi kaldırılacak ve panoda yeni bir kod görünecek. Notlarınız panoda kalır. Devam edilsin mi?",
     phoneForget: "BU TELEFONU UNUT",
+    homeHintTitle: "Ana ekrana ekleyin",
+    homeHintIos:
+      "Kumanda bir uygulama gibi tek dokunuşla açılsın: Safari'de Paylaş düğmesine, sonra \"Ana Ekrana Ekle\"ye dokunun.",
+    homeHintAndroid:
+      "Kumanda bir uygulama gibi tek dokunuşla açılsın: tarayıcının ⋮ menüsünden \"Ana ekrana ekle\"yi seçin.",
+    homeHintClose: "İpucunu kapat",
     phoneForgetConfirm: "Bu telefonun panoyla eşleşmesi kaldırılsın mı?",
     resetSection: "SIFIRLA",
     resetContent: "İÇERİĞİ SIFIRLA",
@@ -232,6 +238,12 @@ export const STRINGS = {
     resetConfirm:
       "Every phone will be unpaired and the board will show a new code. Your notes stay on the board. Continue?",
     phoneForget: "FORGET THIS PHONE",
+    homeHintTitle: "Add to Home Screen",
+    homeHintIos:
+      "Open the remote with one tap, like an app: in Safari, tap Share, then \"Add to Home Screen\".",
+    homeHintAndroid:
+      "Open the remote with one tap, like an app: choose \"Add to Home screen\" from the browser's ⋮ menu.",
+    homeHintClose: "Close tip",
     phoneForgetConfirm: "Unpair this phone from the board?",
     resetSection: "RESET",
     resetContent: "RESET CONTENT",
