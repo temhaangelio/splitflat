@@ -32,10 +32,11 @@ Pi açılınca ekranda QR görünür; telefonla okutun.
 
 ### İnternet kurulumu (ağ yoksa)
 
-Pi açıldıktan sonra bir dakika içinde hiçbir WiFi ağına bağlanamazsa (ya da bağlantı üç dakikadan uzun koparsa) kendi kurulum ağını açar: **Split Flap Kurulum**. Ekranda iki kod görünür:
+Pi açıldıktan sonra bir dakika içinde hiçbir WiFi ağına bağlanamazsa (ya da bağlantı üç dakikadan uzun koparsa) kendi kurulum ağını açar: **Split Flap Kurulum**. Ekran kullanıcıyı adım adım götürür; her adımda tek bir şey görünür:
 
-1. Telefonla okutun: telefon kurulum ağına bağlanır (ağın şifresi ekranda yazar).
-2. Okutun: kurulum sayfası (`/setup`) açılır; listeden evin ağını seçip şifresini girin.
+1. Ağa katılma kodu: telefonla okutunca telefon kurulum ağına bağlanır (ağın şifresi de ekranda yazar).
+2. Pi telefonun katıldığını fark edince ekran kurulum sayfasının (`/setup`) koduna geçer.
+3. Telefon sayfayı açınca ekranda kod kalmaz; telefondan evin ağı seçilip şifresi girilir.
 
 Pi kurulum ağını kapatıp seçilen ağa geçer. Bağlanamazsa kurulum ağını aynı şifreyle yeniden açar ve nedenini ekranda yazar (şifre yanlış, ağ bulunamadı, ağ adres vermedi). Zero 2 W yalnızca 2,4 GHz ağlara bağlanabilir.
 

@@ -108,8 +108,11 @@ export const STRINGS = {
 
     /* ----- internet kurulumu ----- */
     wifiTitle: "İnternete bağlayalım",
-    wifiStep1: "Telefonunuzla okutun ve bu ağa bağlanın",
-    wifiStep2: "Sonra bunu okutun ve evinizin WiFi ağını seçin",
+    wifiJoinText: "Panonun internete bağlanması gerekiyor. Telefonunuzla bu kodu okutun; telefon panonun kurulum ağına bağlanır.",
+    wifiOpenTitle: "Telefonunuz bağlandı",
+    wifiOpenText: "Şimdi bu kodu okutun; açılan sayfadan evinizin WiFi ağını seçeceksiniz.",
+    wifiChooseTitle: "Telefonunuzdan ağı seçin",
+    wifiChooseText: "Açılan sayfada evinizin WiFi ağını seçip şifresini girin.",
     wifiNetwork: "Ağ",
     wifiPassword: "Şifre",
     wifiConnecting: (ssid: string) => `${ssid} ağına bağlanılıyor…`,
@@ -216,8 +219,11 @@ export const STRINGS = {
     phoneForgetConfirm: "Unpair this phone from the board?",
 
     wifiTitle: "Let's get online",
-    wifiStep1: "Scan with your phone and join this network",
-    wifiStep2: "Then scan this and choose your home WiFi",
+    wifiJoinText: "The board needs to get online. Scan this code with your phone; it will join the board's setup network.",
+    wifiOpenTitle: "Your phone is connected",
+    wifiOpenText: "Now scan this code; on the page that opens you'll choose your home WiFi.",
+    wifiChooseTitle: "Choose the network on your phone",
+    wifiChooseText: "On the page that opened, choose your home WiFi and enter its password.",
     wifiNetwork: "Network",
     wifiPassword: "Password",
     wifiConnecting: (ssid: string) => `Connecting to ${ssid}…`,

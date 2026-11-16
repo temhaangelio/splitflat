@@ -23,7 +23,7 @@ import { homedir, networkInterfaces } from "node:os";
 import { dirname, extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseShared, type Shared } from "../lib/board";
-import { fromSetupNetwork, requestConnect, startWifi, wifiState } from "./wifi";
+import { fromSetupNetwork, requestConnect, setupPageOpened, startWifi, wifiState } from "./wifi";
 
 const PORT = Number(process.env.PORT) || 8080;
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -224,6 +224,8 @@ const isLocal = (req: IncomingMessage) =>
 
 async function wifi(req: IncomingMessage, res: ServerResponse, url: URL) {
   if (url.pathname === "/api/wifi" && req.method === "GET") {
+    // Kurulum ağındaki bir telefon soruyorsa kurulum sayfasını açmış demektir.
+    if (!isLocal(req) && fromSetupNetwork(req.socket.remoteAddress ?? "")) setupPageOpened();
     // Kurulum ağının şifresi yalnızca panoya (aynı cihaz) verilir; telefon ağa
     // bağlanmışsa onu zaten biliyordur.
     const state = wifiState(isLocal(req));

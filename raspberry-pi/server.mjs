@@ -83,6 +83,8 @@ var BOOT_WAIT_MS = Number(process.env.SPLITFLAT_WIFI_WAIT_MS) || 6e4;
 var CHECK_MS = 1e4;
 var LOST_MS = 3 * 6e4;
 var SETUP_CON = "splitflap-setup";
+var IP = process.env.SPLITFLAT_IP || "ip";
+var CLIENT_CHECK_MS = 2e3;
 var SETUP_SSID = "Split Flap Kurulum";
 var state = { mode: "checking", networks: [] };
 var setupPassword = "";
@@ -137,6 +139,27 @@ async function scan() {
   }
   return [...best.values()].sort((a, b) => b.signal - a.signal).slice(0, 30);
 }
+function hasClient() {
+  return new Promise((resolve) => {
+    execFile(IP, ["neigh", "show", "dev", IFACE], { timeout: 5e3 }, (err, stdout) => {
+      if (err) return resolve(false);
+      resolve(
+        stdout.split("\n").some((l) => l.includes("lladdr") && !/\b(FAILED|INCOMPLETE)\b/.test(l))
+      );
+    });
+  });
+}
+var clientTimer;
+function watchClients() {
+  clearInterval(clientTimer);
+  clientTimer = setInterval(async () => {
+    if (state.mode !== "setup") return clearInterval(clientTimer);
+    if (state.step === "join" && await hasClient()) {
+      state.step = "open";
+      console.log("WiFi kurulumu: telefon kurulum a\u011F\u0131na kat\u0131ld\u0131");
+    }
+  }, CLIENT_CHECK_MS);
+}
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function newPassword() {
   const abc = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -163,8 +186,10 @@ async function openSetup() {
   const ip = (await nmcli(["-g", "IP4.ADDRESS", "dev", "show", IFACE]).catch(() => "")).split("\n")[0].split("/")[0].trim();
   state.setup = { ssid: SETUP_SSID, password: setupPassword, address: ip || "10.42.0.1" };
   state.mode = "setup";
+  state.step = "join";
   state.ssid = void 0;
   console.log(`WiFi kurulum a\u011F\u0131 a\xE7\u0131k: ${SETUP_SSID} (${state.setup.address})`);
+  watchClients();
 }
 async function closeSetup() {
   await nmcli(["con", "down", SETUP_CON]).catch(() => {
@@ -212,6 +237,9 @@ async function connect(ssid, password) {
 function wifiState(includePassword) {
   if (includePassword || !state.setup) return state;
   return { ...state, setup: { ...state.setup, password: "" } };
+}
+function setupPageOpened() {
+  if (state.mode === "setup") state.step = "choose";
 }
 function fromSetupNetwork(address) {
   if (!state.setup) return false;
@@ -413,6 +441,7 @@ function lanOrigin() {
 var isLocal = (req) => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress ?? "");
 async function wifi(req, res, url) {
   if (url.pathname === "/api/wifi" && req.method === "GET") {
+    if (!isLocal(req) && fromSetupNetwork(req.socket.remoteAddress ?? "")) setupPageOpened();
     const state2 = wifiState(isLocal(req));
     return json(res, 200, {
       ...state2,

@@ -693,75 +693,81 @@ export default function Board() {
         </div>
       )}
 
-      {/* İnternet kurulumu: Pi bir ağa bağlı değil. Eşleştirme kodunun da üstünde durur. */}
-      {(wifi?.mode === "setup" || wifi?.mode === "connecting") && (
-        <div className="absolute inset-0 z-50 grid place-items-center bg-black p-[4vmin] text-ink">
-          <div className="flex w-full max-w-[1100px] flex-col items-center gap-[4vmin]">
-            <div className="text-center">
-              <p className="text-[clamp(.65rem,1.5vmin,.9rem)] font-semibold tracking-[.42em] text-muted">
-                {BRAND}
-              </p>
-              <h1 className="mt-[1.5vmin] text-[clamp(1.5rem,4.4vmin,2.8rem)] leading-tight font-bold tracking-wide">
-                {wifi.mode === "connecting" && wifi.ssid
-                  ? t.wifiConnecting(wifi.ssid)
-                  : t.wifiTitle}
-              </h1>
-              {wifi.mode === "connecting" ? (
-                <p className="mt-[1.5vmin] text-[clamp(.95rem,2.2vmin,1.3rem)] text-muted">
-                  {t.wifiConnectingHint}
-                </p>
-              ) : (
-                wifi.error && (
-                  <p
-                    role="alert"
-                    className="mt-[1.5vmin] text-[clamp(.95rem,2.2vmin,1.3rem)] text-ink"
-                  >
-                    {t.wifiErrors[wifi.error]}
-                  </p>
-                )
-              )}
-            </div>
-
-            {wifi.mode === "setup" && wifi.setup && (
-              <div className="flex flex-wrap items-start justify-center gap-[6vmin]">
-                {(
-                  [
-                    { n: 1, text: t.wifiStep1, img: wifiCodes?.join },
-                    { n: 2, text: t.wifiStep2, img: wifiCodes?.page },
-                  ] as const
-                ).map((step) => (
-                  <div key={step.n} className="flex w-[min(38vmin,340px)] flex-col items-center gap-[2vmin]">
-                    <p className="text-center text-[clamp(.9rem,2vmin,1.2rem)] leading-snug">
-                      <span className="mr-2 font-bold">{step.n}.</span>
-                      {step.text}
-                    </p>
-                    <div className="bg-white p-[1.2vmin]">
-                      {step.img ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- tarayıcıda üretilen veri adresi
-                        <img src={step.img} alt="" className="size-[min(34vmin,300px)]" />
-                      ) : (
-                        <div className="size-[min(34vmin,300px)]" />
-                      )}
-                    </div>
-                    {step.n === 1 ? (
-                      <dl className="grid grid-cols-[auto_1fr] gap-x-3 text-[clamp(.85rem,1.8vmin,1.1rem)]">
-                        <dt className="text-muted">{t.wifiNetwork}</dt>
-                        <dd className="font-semibold">{wifi.setup?.ssid}</dd>
-                        <dt className="text-muted">{t.wifiPassword}</dt>
-                        <dd className="font-mono font-semibold tracking-wider">{wifi.setup?.password}</dd>
-                      </dl>
+      {/* İnternet kurulumu: Pi bir ağa bağlı değil. Eşleştirme kodunun da üstünde
+          durur ve kullanıcıyı adım adım götürür; her adımda tek bir şey görünür. */}
+      {(wifi?.mode === "setup" || wifi?.mode === "connecting") &&
+        (() => {
+          const step = wifi.mode === "connecting" ? null : (wifi.step ?? "join");
+          const title =
+            wifi.mode === "connecting" && wifi.ssid
+              ? t.wifiConnecting(wifi.ssid)
+              : step === "open"
+                ? t.wifiOpenTitle
+                : step === "choose"
+                  ? t.wifiChooseTitle
+                  : t.wifiTitle;
+          const text =
+            wifi.mode === "connecting"
+              ? t.wifiConnectingHint
+              : step === "open"
+                ? t.wifiOpenText
+                : step === "choose"
+                  ? t.wifiChooseText
+                  : t.wifiJoinText;
+          const img = step === "join" ? wifiCodes?.join : step === "open" ? wifiCodes?.page : null;
+          return (
+            <div className="absolute inset-0 z-50 grid place-items-center bg-black p-[4vmin] text-ink">
+              <div className="flex flex-wrap items-center justify-center gap-[6vmin]">
+                {(step === "join" || step === "open") && (
+                  <div className="bg-white p-[1.2vmin]">
+                    {img ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- tarayıcıda üretilen veri adresi
+                      <img src={img} alt="" className="size-[min(52vmin,460px)]" />
                     ) : (
-                      <p className="font-mono text-[clamp(.85rem,1.8vmin,1.1rem)] text-muted">
-                        {wifi.setupUrl?.replace(/^http:\/\//, "")}
-                      </p>
+                      <div className="size-[min(52vmin,460px)]" />
                     )}
                   </div>
-                ))}
+                )}
+                <div
+                  className={`flex max-w-[28rem] flex-col gap-[2vmin] ${
+                    step === "join" || step === "open" ? "text-center sm:text-left" : "text-center"
+                  }`}
+                >
+                  <p className="text-[clamp(.65rem,1.5vmin,.9rem)] font-semibold tracking-[.42em] text-muted">
+                    {BRAND}
+                    {step && (
+                      <span className="ml-3 tabular-nums">
+                        {step === "join" ? 1 : step === "open" ? 2 : 3}/3
+                      </span>
+                    )}
+                  </p>
+                  <h1 className="text-[clamp(1.5rem,4.4vmin,2.8rem)] leading-tight font-bold tracking-wide">
+                    {title}
+                  </h1>
+                  <p className="text-[clamp(.95rem,2.2vmin,1.3rem)] leading-relaxed text-muted">{text}</p>
+                  {step === "join" && wifi.setup && (
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[clamp(.95rem,2.2vmin,1.3rem)]">
+                      <dt className="text-muted">{t.wifiNetwork}</dt>
+                      <dd className="font-semibold">{wifi.setup.ssid}</dd>
+                      <dt className="text-muted">{t.wifiPassword}</dt>
+                      <dd className="font-mono font-semibold tracking-wider">{wifi.setup.password}</dd>
+                    </dl>
+                  )}
+                  {step === "open" && (
+                    <p className="font-mono text-[clamp(.95rem,2.2vmin,1.3rem)]">
+                      {wifi.setupUrl?.replace(/^http:\/\//, "")}
+                    </p>
+                  )}
+                  {wifi.mode === "setup" && wifi.error && (
+                    <p role="alert" className="border-l-2 border-ink pl-3 text-[clamp(.9rem,2vmin,1.2rem)]">
+                      {t.wifiErrors[wifi.error]}
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          );
+        })()}
     </section>
   );
 }

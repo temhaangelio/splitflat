@@ -12,6 +12,7 @@
 //   SPLITFLAT_NMCLI_SUDO=0   sudo kullanma
 //   SPLITFLAT_WIFI_IFACE     WiFi arayüzü (varsayılan wlan0)
 //   SPLITFLAT_WIFI_WAIT_MS   açılışta ağ için beklenecek süre (varsayılan 60 sn)
+//   SPLITFLAT_IP             ip komutu yerine kullanılacak program
 
 import { execFile } from "node:child_process";
 import { randomInt } from "node:crypto";
@@ -26,6 +27,9 @@ const CHECK_MS = 10_000;
 const LOST_MS = 3 * 60_000;
 
 const SETUP_CON = "splitflap-setup";
+const IP = process.env.SPLITFLAT_IP || "ip";
+// Kurulum ağı açıkken telefonun katılıp katılmadığına bu sıklıkla bakılır.
+const CLIENT_CHECK_MS = 2000;
 export const SETUP_SSID = "Split Flap Kurulum";
 
 export type Network = { ssid: string; signal: number; secure: boolean };
@@ -47,6 +51,13 @@ export type WifiState = {
   error?: WifiError;
   /** Kurulum ağı: ad, şifre ve telefonun açacağı adres */
   setup?: { ssid: string; password: string; address: string };
+  /**
+   * Kurulum ağı açıkken hangi adımdayız; pano buna göre tek bir şey gösterir.
+   *   join:   telefon henüz kurulum ağına katılmadı (ağa katılma kodu)
+   *   open:   telefon katıldı, kurulum sayfası henüz açılmadı (sayfa kodu)
+   *   choose: telefon kurulum sayfasında, ağ seçiliyor (kod yok)
+   */
+  step?: "join" | "open" | "choose";
 };
 
 const state: WifiState = { mode: "checking", networks: [] };
@@ -111,6 +122,39 @@ async function scan(): Promise<Network[]> {
   return [...best.values()].sort((a, b) => b.signal - a.signal).slice(0, 30);
 }
 
+/* ---------- telefon kurulum ağına katıldı mı ---------- */
+
+/**
+ * Kurulum ağında Pi dışında bir cihaz var mı? Telefon ağa katılınca adres alır
+ * ve Pi ile konuşur (DNS, bağlantı denetimi); bu da Pi'nin komşu tablosuna
+ * düşer. `ip neigh` için yönetici yetkisi gerekmez.
+ */
+function hasClient(): Promise<boolean> {
+  return new Promise((resolve) => {
+    execFile(IP, ["neigh", "show", "dev", IFACE], { timeout: 5000 }, (err, stdout) => {
+      if (err) return resolve(false);
+      resolve(
+        stdout
+          .split("\n")
+          .some((l) => l.includes("lladdr") && !/\b(FAILED|INCOMPLETE)\b/.test(l)),
+      );
+    });
+  });
+}
+
+let clientTimer: ReturnType<typeof setInterval> | undefined;
+
+function watchClients() {
+  clearInterval(clientTimer);
+  clientTimer = setInterval(async () => {
+    if (state.mode !== "setup") return clearInterval(clientTimer);
+    if (state.step === "join" && (await hasClient())) {
+      state.step = "open";
+      console.log("WiFi kurulumu: telefon kurulum ağına katıldı");
+    }
+  }, CLIENT_CHECK_MS);
+}
+
 /* ---------- kurulum ağı ---------- */
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -136,8 +180,10 @@ async function openSetup() {
     .trim();
   state.setup = { ssid: SETUP_SSID, password: setupPassword, address: ip || "10.42.0.1" };
   state.mode = "setup";
+  state.step = "join";
   state.ssid = undefined;
   console.log(`WiFi kurulum ağı açık: ${SETUP_SSID} (${state.setup.address})`);
+  watchClients();
 }
 
 async function closeSetup() {
@@ -191,6 +237,11 @@ async function connect(ssid: string, password: string) {
 export function wifiState(includePassword: boolean): WifiState {
   if (includePassword || !state.setup) return state;
   return { ...state, setup: { ...state.setup, password: "" } };
+}
+
+/** Telefon kurulum sayfasını açtı: pano kodu kaldırıp "telefonunuzdan seçin" der. */
+export function setupPageOpened() {
+  if (state.mode === "setup") state.step = "choose";
 }
 
 /** İstek kurulum ağına bağlı bir telefondan mı geliyor? */
