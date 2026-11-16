@@ -75,6 +75,18 @@ export function wrap(text: string, width: number): string[] {
 }
 
 /** Not, verilen boyuttaki panoya (satır sayısını aşmadan) sığıyor mu? */
+/** Satırları ızgaranın ortasına hizalar. `content` null ise (henüz yüklenmedi) pano boştur. */
+export function boardLines(content: string[] | null, cols: number, rows: number): string[] {
+  if (content === null) return Array<string>(rows).fill("");
+  // Sütuna sığmayan satırlar kelime kelime bölünür.
+  const lines = content.flatMap((l) => (l ? wrap(l, cols) : [""])).slice(0, rows);
+  const offset = Math.floor((rows - lines.length) / 2);
+  return Array.from({ length: rows }, (_, r) => {
+    const l = lines[r - offset] ?? "";
+    return " ".repeat(Math.floor((cols - l.length) / 2)) + l;
+  });
+}
+
 export const fits = (text: string, size: SizeId) => {
   const { cols, rows } = sizeOf(size);
   return text.length <= Math.min(NOTE_LIMIT, cols * rows) && wrap(text, cols).length <= rows;

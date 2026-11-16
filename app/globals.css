@@ -14,6 +14,9 @@
   --color-muted: #8a8a8a;
   --color-slot: #040404; /* hücre yuvasının kenarı */
   --color-hinge: #000000; /* iki yaprak arasındaki çizgi */
+  /* Yalnızca telefon kumandasında: bağlantı durumu ve geri alınamaz işlemler. */
+  --color-live: #4ade80;
+  --color-danger: #ff6b5e;
 
   --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
@@ -110,6 +113,11 @@ dialog[open]::backdrop {
   transition: none !important;
   animation: none !important;
 }
+/* Bekleme noktaları hafif görünümde de yanıp söner: yalnızca saydamlık
+   değişir, ucuzdur; ekran donmuş görünmesin. */
+[data-lite] .wait-dot {
+  animation: wait-dot 1.2s ease-in-out infinite !important;
+}
 [data-lite] * {
   backdrop-filter: none !important;
   text-shadow: none !important;
@@ -117,4 +125,18 @@ dialog[open]::backdrop {
 /* Ayarlar penceresinin arkasındaki bulanıklık da; ::backdrop yukarıdaki * ile eşleşmez. */
 [data-lite] dialog::backdrop {
   backdrop-filter: none !important;
+}
+
+/* Bekleme noktaları (bkz. Board.tsx → Dots) */
+.wait-dot {
+  animation: wait-dot 1.2s ease-in-out infinite;
+}
+@keyframes wait-dot {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
 }

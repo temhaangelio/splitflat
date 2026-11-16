@@ -29,7 +29,7 @@ const LOST_MS = 3 * 60_000;
 const SETUP_CON = "splitflap-setup";
 const IP = process.env.SPLITFLAT_IP || "ip";
 // Kurulum ağı açıkken telefonun katılıp katılmadığına bu sıklıkla bakılır.
-const CLIENT_CHECK_MS = 2000;
+const CLIENT_CHECK_MS = 1000;
 export const SETUP_SSID = "Split Flap Kurulum";
 
 export type Network = { ssid: string; signal: number; secure: boolean };
@@ -58,6 +58,13 @@ export type WifiState = {
    *   choose: telefon kurulum sayfasında, ağ seçiliyor (kod yok)
    */
   step?: "join" | "open" | "choose";
+  /**
+   * Bağlanırken hangi aşamadayız; pano ekranda ne olduğunu yazar.
+   *   leaving:   kurulum ağı kapatılıyor
+   *   searching: seçilen ağ aranıyor
+   *   joining:   ağa giriliyor ve adres alınıyor
+   */
+  phase?: "leaving" | "searching" | "joining";
 };
 
 const state: WifiState = { mode: "checking", networks: [] };
@@ -104,6 +111,19 @@ async function connectedTo(): Promise<string | null> {
     if (dev === IFACE && st === "connected" && con && con !== SETUP_CON) return con;
   }
   return null;
+}
+
+/** Pi'de kayıtlı bir WiFi ağı var mı? Yoksa açılışta beklemenin anlamı yok. */
+async function hasSavedWifi(): Promise<boolean> {
+  try {
+    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"]);
+    return out
+      .split("\n")
+      .map(fields)
+      .some(([type, name]) => type === "802-11-wireless" && name !== SETUP_CON);
+  } catch {
+    return true; // bilinmiyorsa beklenir
+  }
 }
 
 async function scan(): Promise<Network[]> {
@@ -205,16 +225,19 @@ function classify(message: string): WifiError {
 async function connect(ssid: string, password: string) {
   busy = true;
   state.mode = "connecting";
+  state.phase = "leaving";
   state.ssid = ssid;
   state.error = undefined;
   try {
     await closeSetup();
-    await sleep(2000);
+    await sleep(1000);
+    state.phase = "searching";
     // Kurulum ağı kapanınca liste boş olabilir; hedef ağı görebilmek için yeniden tara.
     await nmcli(["dev", "wifi", "list", "--rescan", "yes", "ifname", IFACE], 30_000).catch(() => {});
     const args = ["dev", "wifi", "connect", ssid];
     if (password) args.push("password", password);
     args.push("ifname", IFACE);
+    state.phase = "joining";
     await nmcli(args, 60_000);
     state.mode = "online";
     state.networks = [];
@@ -227,6 +250,7 @@ async function connect(ssid: string, password: string) {
     await nmcli(["con", "delete", "id", ssid]).catch(() => {});
     await openSetup().catch((err) => console.error("Kurulum ağı yeniden açılamadı:", err));
   } finally {
+    state.phase = undefined;
     busy = false;
   }
 }
@@ -314,7 +338,9 @@ export async function startWifi() {
       lostSince = null;
       return;
     }
-    if (state.mode === "checking" && Date.now() - started < BOOT_WAIT_MS) return;
+    // Açılışta kayıtlı ağa bağlanması beklenir; hiç kayıtlı ağ yoksa beklenmez.
+    if (state.mode === "checking" && Date.now() - started < BOOT_WAIT_MS && (await hasSavedWifi()))
+      return;
     if (state.mode === "online") {
       lostSince ??= Date.now();
       if (Date.now() - lostSince < LOST_MS) return;

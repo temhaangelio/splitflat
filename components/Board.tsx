@@ -14,7 +14,7 @@ import {
   defaultShared,
   parseShared,
   sizeOf,
-  wrap,
+  boardLines,
   type Countdown,
   type Shared,
 } from "@/lib/board";
@@ -50,14 +50,16 @@ const BOARD_KEY = "splitflat:board"; // son bilinen durum; açılışta ve çevr
 const REMOTE_KEY = "splitflat:remote"; // eşleşmiş panonun anahtarları
 const PENDING_KEY = "splitflat:pending"; // henüz okutulmamış eşleştirme kodunun anahtarları
 
-// Pano sunucuya bu aralıkla "değişen var mı" diye sorar. Her sorgu depoda bir
-// komut harcar: 7 sn, tek pano için ayda ~370 bin.
-const POLL_MS = 7000;
-// Eşleştirme kodu ekrandayken: ilk dakikalarda sık, sonra seyrek sorulur ki
-// kod açık unutulan bir sekme depoyu boşuna yormasın.
-const PAIR_POLL_FAST_MS = 4000;
-const PAIR_POLL_SLOW_MS = 20_000;
-const PAIR_FAST_FOR_MS = 3 * 60_000;
+// Pano sunucuya bu aralıkla "değişen var mı" diye sorar. Sunucu aynı Pi'de
+// çalıştığı için sorgu ucuzdur; telefondaki değişiklik hemen görünür.
+const POLL_MS = 2000;
+// Eşleştirme kodu ekrandayken: okutulduğu an fark edilsin.
+const PAIR_POLL_MS = 1500;
+// İnternet kurulumu sürerken durum bu sıklıkla sorulur; değilse seyrek.
+const WIFI_POLL_ACTIVE_MS = 1000;
+const WIFI_POLL_IDLE_MS = 15_000;
+// Telefon eşleşince ekranda kısa bir onay görünür.
+const PAIRED_TOAST_MS = 3000;
 // Eşleşmiş pano da kodu kısa süre gösterir: her açılışta ve ekrana dokununca.
 // Böylece eşleşmesini kaybeden bir telefon, klavye gerekmeden yeniden eşleşir.
 const PEEK_ON_BOOT_MS = 20_000;
@@ -181,18 +183,6 @@ function weatherLines(w: Weather | "error" | null, t: Strings, lang: Lang): stri
   ];
 }
 
-/** Satırları ızgaranın ortasına hizalar. `content` null ise (henüz yüklenmedi) pano boştur. */
-function boardLines(content: string[] | null, cols: number, rows: number): string[] {
-  if (content === null) return Array<string>(rows).fill("");
-  // Sütuna sığmayan satırlar kelime kelime bölünür.
-  const lines = content.flatMap((l) => (l ? wrap(l, cols) : [""])).slice(0, rows);
-  const offset = Math.floor((rows - lines.length) / 2);
-  return Array.from({ length: rows }, (_, r) => {
-    const l = lines[r - offset] ?? "";
-    return " ".repeat(Math.floor((cols - l.length) / 2)) + l;
-  });
-}
-
 /* ---------- Tarayıcıdaki kayıt ---------- */
 
 function store(key: string, value: string | null) {
@@ -267,6 +257,8 @@ export default function Board() {
   const [wifiCodes, setWifiCodes] = useState<{ join: string; page: string } | null>(null);
   // Eşleşmiş panonun kodu şu kadar süre daha ekranda (0: gizli).
   const [peekMs, setPeekMs] = useState(0);
+  // Telefon az önce eşleşti: kısa bir onay gösterilir.
+  const [justPaired, setJustPaired] = useState(false);
   const version = useRef(0); // sunucudaki son bilinen sürüm
 
   const lang: Lang = data?.lang ?? "tr";
@@ -367,6 +359,8 @@ export default function Board() {
     setQr(null);
     setPeekMs(0);
     setRemote(pair);
+    setJustPaired(true);
+    setTimeout(() => setJustPaired(false), PAIRED_TOAST_MS);
     apply(next, nextV);
   });
 
@@ -376,7 +370,6 @@ export default function Board() {
     if (!pending) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
-    const started = Date.now();
     const tick = async () => {
       try {
         const r = await readBoard(pending.id);
@@ -390,8 +383,7 @@ export default function Board() {
           code === "not_found" ? "ready" : code === "not_configured" ? "unavailable" : "offline",
         );
       }
-      const fast = Date.now() - started < PAIR_FAST_FOR_MS;
-      timer = setTimeout(tick, fast ? PAIR_POLL_FAST_MS : PAIR_POLL_SLOW_MS);
+      timer = setTimeout(tick, PAIR_POLL_MS);
     };
     void tick();
     return () => {
@@ -416,7 +408,7 @@ export default function Board() {
       setWifi(w);
       // Kurulum sürerken sık, değilse seyrek sorulur.
       const active = w?.mode === "setup" || w?.mode === "connecting" || w?.mode === "checking";
-      timer = setTimeout(tick, active ? 3000 : 15_000);
+      timer = setTimeout(tick, active ? WIFI_POLL_ACTIVE_MS : WIFI_POLL_IDLE_MS);
     };
     void tick();
     return () => {
@@ -448,10 +440,26 @@ export default function Board() {
     };
   }, [joinSsid, joinPassword, setupUrl]);
 
-  // Telefonun ulaşacağı adres bir kez öğrenilir.
+  // Telefonun ulaşacağı adres: açılışta ve Pi'nin ağı değiştikçe yeniden
+  // öğrenilir (kurulumdan sonra Pi'nin ev ağındaki adresi yenidir).
+  const wifiMode = wifi?.mode ?? "none";
   useEffect(() => {
-    void hostOrigin().then(setOrigin);
-  }, []);
+    if (wifiMode === "setup" || wifiMode === "connecting") return;
+    let alive = true;
+    void hostOrigin().then((o) => {
+      if (alive) setOrigin(o);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [wifiMode]);
+
+  // Bağlanma aşamasında geçen süre ekranda sayılır: pano donmuş görünmesin.
+  const [connectingSince, setConnectingSince] = useState<number | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setConnectingSince(wifiMode === "connecting" ? Date.now() : null), 0);
+    return () => clearTimeout(t);
+  }, [wifiMode]);
 
   // Eşleştirme kodu; kütüphane yalnızca gerektiğinde yüklenir.
   useEffect(() => {
@@ -664,7 +672,9 @@ export default function Board() {
                   // eslint-disable-next-line @next/next/no-img-element -- tarayıcıda üretilen veri adresi
                   <img src={qr} alt={t.pairQrAlt} className="size-[min(52vmin,460px)]" />
                 ) : (
-                  <div className="size-[min(52vmin,460px)]" />
+                  <div className="grid size-[min(52vmin,460px)] place-items-center text-black">
+                    <Dots />
+                  </div>
                 )}
               </div>
             )}
@@ -688,6 +698,7 @@ export default function Board() {
                       ? t.pairOffline
                       : t.pairText}
               </p>
+              {pending && link === "ready" && <Waiting label={t.waitPhone} />}
               {/* Ağdaysa panonun ev ağındaki adresi: telefonda elle açmak ya da
                   modemde sabit IP ayırmak için. Anahtar yazılmaz. */}
               {peeking && wifi?.mode !== "setup" && origin && !/\/\/(localhost|127\.)/.test(origin) && (
@@ -736,7 +747,9 @@ export default function Board() {
                       // eslint-disable-next-line @next/next/no-img-element -- tarayıcıda üretilen veri adresi
                       <img src={img} alt="" className="size-[min(52vmin,460px)]" />
                     ) : (
-                      <div className="size-[min(52vmin,460px)]" />
+                      <div className="grid size-[min(52vmin,460px)] place-items-center text-black">
+                        <Dots />
+                      </div>
                     )}
                   </div>
                 )}
@@ -770,6 +783,21 @@ export default function Board() {
                       {wifi.setupUrl?.replace(/^http:\/\//, "")}
                     </p>
                   )}
+                  {wifi.mode === "connecting" ? (
+                    <Waiting
+                      label={t.wifiPhases[wifi.phase ?? "joining"]}
+                      since={connectingSince}
+                      seconds={t.elapsed}
+                      center
+                    />
+                  ) : (
+                    step && (
+                      <Waiting
+                        label={step === "join" ? t.waitJoin : step === "open" ? t.waitOpen : t.waitChoose}
+                        center={step === "choose"}
+                      />
+                    )
+                  )}
                   {wifi.mode === "setup" && wifi.error && (
                     <p role="alert" className="border-l-2 border-ink pl-3 text-[clamp(.9rem,2vmin,1.2rem)]">
                       {t.wifiErrors[wifi.error]}
@@ -780,6 +808,91 @@ export default function Board() {
             </div>
           );
         })()}
+
+      {/* Açılış: pano kayıtlı WiFi ağına bağlanmaya çalışıyor. Yalnızca henüz
+          eşleşmemiş panoda; eşleşmiş pano bu sırada içeriğini göstermeye devam eder. */}
+      {wifi?.mode === "checking" && pending && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-black p-[4vmin] text-center text-ink">
+          <div className="flex max-w-[30rem] flex-col items-center gap-[2vmin]">
+            <p className="text-[clamp(.65rem,1.5vmin,.9rem)] font-semibold tracking-[.42em] text-muted">
+              {BRAND}
+            </p>
+            <h1 className="text-[clamp(1.5rem,4.4vmin,2.8rem)] leading-tight font-bold tracking-wide">
+              {t.checkingTitle}
+            </h1>
+            <p className="text-[clamp(.95rem,2.2vmin,1.3rem)] leading-relaxed text-muted">
+              {t.checkingText}
+            </p>
+            <Dots />
+          </div>
+        </div>
+      )}
+
+      {/* Telefon eşleşti: kısa bir onay. */}
+      {justPaired && (
+        <div
+          role="status"
+          className="absolute inset-x-0 bottom-[6vmin] z-50 mx-auto flex w-fit items-center gap-[1.5vmin] bg-ink px-[3vmin] py-[1.6vmin] text-[clamp(1rem,2.6vmin,1.6rem)] font-bold tracking-wide text-black"
+        >
+          <svg viewBox="0 0 24 24" className="size-[1.2em]" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+            <path d="M4 12.5l5 5L20 6.5" />
+          </svg>
+          {t.pairedToast}
+        </div>
+      )}
     </section>
+  );
+}
+
+/** Üç nokta sırayla yanıp söner: bir şeyin beklendiğini gösterir. */
+function Dots() {
+  return (
+    <span aria-hidden className="inline-flex gap-[1vmin]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="wait-dot size-[1.4vmin] min-h-2 min-w-2 rounded-full bg-current"
+          style={{ animationDelay: `${i * 200}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Bekleme satırı: ne beklendiğini yazar. `since` verilirse geçen süre her
+ * saniye artar; hafif görünümde animasyon kısık olsa da sayı değişir.
+ */
+function Waiting({
+  label,
+  since,
+  seconds,
+  center = false,
+}: {
+  label: string;
+  since?: number | null;
+  seconds?: (n: number) => string;
+  center?: boolean;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!since) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [since]);
+  const elapsed = since ? Math.max(0, Math.round((now - since) / 1000)) : null;
+  return (
+    <p
+      role="status"
+      className={`mt-[1vmin] flex items-center gap-[1.6vmin] text-[clamp(.9rem,2vmin,1.2rem)] text-ink ${
+        center ? "justify-center" : "justify-center sm:justify-start"
+      }`}
+    >
+      <Dots />
+      <span>{label}</span>
+      {elapsed !== null && seconds && (
+        <span className="text-muted tabular-nums">{seconds(elapsed)}</span>
+      )}
+    </p>
   );
 }

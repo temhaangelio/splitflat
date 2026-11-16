@@ -9,6 +9,7 @@ export type WifiStatus = {
   error?: WifiError;
   setup?: { ssid: string; password: string; address: string };
   step?: "join" | "open" | "choose";
+  phase?: "leaving" | "searching" | "joining";
   setupUrl: string | null;
 };
 

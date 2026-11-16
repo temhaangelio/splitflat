@@ -117,7 +117,7 @@ class FlapEngine {
       return;
     }
     if (kicked && lite && !this.reduced) {
-      if (this.idx === this.target) return;
+      // Yeni içerik (not, saat, hava durumu): harfi aynı kalan hücre de çalışır.
       this.running = true;
       this.timer = setTimeout(() => void this.runLite(), delay);
       return;

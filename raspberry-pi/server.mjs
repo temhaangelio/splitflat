@@ -84,7 +84,7 @@ var CHECK_MS = 1e4;
 var LOST_MS = 3 * 6e4;
 var SETUP_CON = "splitflap-setup";
 var IP = process.env.SPLITFLAT_IP || "ip";
-var CLIENT_CHECK_MS = 2e3;
+var CLIENT_CHECK_MS = 1e3;
 var SETUP_SSID = "Split Flap Kurulum";
 var state = { mode: "checking", networks: [] };
 var setupPassword = "";
@@ -123,6 +123,14 @@ async function connectedTo() {
     if (dev === IFACE && st === "connected" && con && con !== SETUP_CON) return con;
   }
   return null;
+}
+async function hasSavedWifi() {
+  try {
+    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"]);
+    return out.split("\n").map(fields).some(([type, name]) => type === "802-11-wireless" && name !== SETUP_CON);
+  } catch {
+    return true;
+  }
 }
 async function scan() {
   const out = await nmcli(
@@ -209,16 +217,19 @@ function classify(message) {
 async function connect(ssid, password) {
   busy = true;
   state.mode = "connecting";
+  state.phase = "leaving";
   state.ssid = ssid;
   state.error = void 0;
   try {
     await closeSetup();
-    await sleep(2e3);
+    await sleep(1e3);
+    state.phase = "searching";
     await nmcli(["dev", "wifi", "list", "--rescan", "yes", "ifname", IFACE], 3e4).catch(() => {
     });
     const args = ["dev", "wifi", "connect", ssid];
     if (password) args.push("password", password);
     args.push("ifname", IFACE);
+    state.phase = "joining";
     await nmcli(args, 6e4);
     state.mode = "online";
     state.networks = [];
@@ -231,6 +242,7 @@ async function connect(ssid, password) {
     });
     await openSetup().catch((err) => console.error("Kurulum a\u011F\u0131 yeniden a\xE7\u0131lamad\u0131:", err));
   } finally {
+    state.phase = void 0;
     busy = false;
   }
 }
@@ -300,7 +312,8 @@ async function startWifi() {
       lostSince = null;
       return;
     }
-    if (state.mode === "checking" && Date.now() - started < BOOT_WAIT_MS) return;
+    if (state.mode === "checking" && Date.now() - started < BOOT_WAIT_MS && await hasSavedWifi())
+      return;
     if (state.mode === "online") {
       lostSince ??= Date.now();
       if (Date.now() - lostSince < LOST_MS) return;
