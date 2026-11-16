@@ -10,6 +10,7 @@
 #   3. FullPageOS varsa, panonun açılışta bu sunucuyu göstermesini sağlar,
 #      Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS
 #      logosunu Split Flap açılış görseliyle değiştirir.
+#   4. Pi açılırken ekrana akan sistem yazılarını gizler.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -52,6 +53,9 @@ if [ -f "$URL_FILE" ]; then
   echo "==> FullPageOS: açılış görseli"
   bash "$DIR/splash.sh"
 fi
+
+echo "==> Açılış yazıları"
+bash "$DIR/quiet-boot.sh"
 
 echo
 echo "Kurulum bitti. Pi'yi yeniden başlatın:  sudo reboot"

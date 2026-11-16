@@ -26,6 +26,7 @@ sudo reboot
 1. Node.js yoksa kurar (`apt install nodejs`).
 2. Sunucuyu `splitflat` adlı bir servis olarak kurar; Pi açılınca kendiliğinden başlar, çökerse yeniden başlar.
 3. FullPageOS varsa açılış adresini `http://localhost:8080/?lite` yapar, Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS logosunu Split Flap açılış görseliyle değiştirir.
+4. Pi açılırken ekrana akan sistem yazılarını gizler (`quiet-boot.sh`). Önceki ayar `cmdline.txt.orig` olarak saklanır; bir sorun olursa SD kartı bilgisayara takıp o dosyayı `cmdline.txt` adıyla geri koymak yeterlidir.
 
 Pi açılınca ekranda QR görünür; telefonla okutun.
 
