@@ -7,8 +7,9 @@
 # Yaptıkları:
 #   1. Node.js yoksa kurar.
 #   2. Sunucuyu açılışta başlayan bir servis olarak kurar ve başlatır.
-#   3. FullPageOS varsa, panonun açılışta bu sunucuyu göstermesini sağlar ve
-#      Chromium'un "1 GB'tan az bellek" uyarısını kapatır.
+#   3. FullPageOS varsa, panonun açılışta bu sunucuyu göstermesini sağlar,
+#      Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS
+#      logosunu Split Flap açılış görseliyle değiştirir.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -47,6 +48,9 @@ if [ -f "$URL_FILE" ]; then
     echo "==> FullPageOS: bellek uyarısı kapatılıyor"
     sudo sed -i 's/^   --kiosk$/   --kiosk\n   --no-memcheck/' "$START"
   fi
+
+  echo "==> FullPageOS: açılış görseli"
+  bash "$DIR/splash.sh"
 fi
 
 echo

@@ -25,7 +25,7 @@ sudo reboot
 
 1. Node.js yoksa kurar (`apt install nodejs`).
 2. Sunucuyu `splitflat` adlı bir servis olarak kurar; Pi açılınca kendiliğinden başlar, çökerse yeniden başlar.
-3. FullPageOS varsa açılış adresini `http://localhost:8080/?lite` yapar ve Chromium'un "1 GB'tan az bellek" uyarısını kapatır.
+3. FullPageOS varsa açılış adresini `http://localhost:8080/?lite` yapar, Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS logosunu Split Flap açılış görseliyle değiştirir.
 
 Pi açılınca ekranda QR görünür; telefonla okutun.
 
@@ -43,7 +43,7 @@ Notlar `~/.splitflat` altında durur; güncelleme onlara dokunmaz.
 - Adres yanlış bulunursa servise `SPLITFLAT_URL=http://192.168.1.50:8080` gibi elle verilebilir (`/etc/systemd/system/splitflat.service` içinde `Environment=`).
 - Ev içinde bağlantı şifrelenmez (http). Bu yüzden telefonda "Bağlantıyı kopyala" panoya kopyalamak yerine bağlantıyı gösterir.
 - **Hafif görünüm:** tarayıcı 1 GB ve altında bellek bildirdiğinde ya da adreste `?lite` varken açılır; kart çevirme animasyonunu ve ağır görsel katmanları kapatır. Zero 2 W için gereklidir.
-- `raspberry-pi/splash.png`: FullPageOS için açılış görseli; önyükleme bölümündeki `splash.png`'nin üzerine kopyalayın.
+- `raspberry-pi/splash.png`: Pi açılırken ve tarayıcı açılmadan önce görünen görsel. Kurulum ve güncelleme betikleri FullPageOS'un kendi görselleri yerine bunu koyar (`splash.sh`).
 
 ### Servis komutları
 
