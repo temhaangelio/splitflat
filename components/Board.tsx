@@ -696,7 +696,7 @@ export default function Board() {
                     {t.pairAddress}
                   </span>
                   <span className="font-mono text-[clamp(1.1rem,3vmin,1.9rem)] font-bold tracking-wide">
-                    {origin.replace(/^https?:\/\//, "")}
+                    {origin.replace(/^https?:\/\//, "")}/remote
                   </span>
                 </p>
               )}

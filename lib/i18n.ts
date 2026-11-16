@@ -66,7 +66,7 @@ export const STRINGS = {
     about: "Hakkında",
     phoneLoading: "Pano yükleniyor…",
     phoneNotPaired:
-      "Bu telefon bir panoyla eşleşmemiş. Panonun ekranındaki kodu telefonunuzun kamerasıyla okutun.",
+      "Bu telefon bir panoyla eşleşmemiş. Panonun ekranına dokunun; çıkan kodu telefonunuzun kamerasıyla okutun.",
     phoneGone:
       "Bu pano artık yok ya da eşleşmesi sıfırlanmış. Panonun ekranındaki yeni kodu okutun.",
     phoneOffline: "Panoya ulaşılamadı. Telefon evin WiFi ağında mı? Yeniden deneniyor…",
@@ -193,7 +193,7 @@ export const STRINGS = {
     about: "About",
     phoneLoading: "Loading the board…",
     phoneNotPaired:
-      "This phone isn't paired with a board. Scan the code on the board's screen with your phone's camera.",
+      "This phone isn't paired with a board. Touch the board's screen and scan the code that appears with your phone's camera.",
     phoneGone:
       "This board no longer exists or its pairing was reset. Scan the new code on the board's screen.",
     phoneOffline: "Couldn't reach the board. Is the phone on your home WiFi? Retrying…",
