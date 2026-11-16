@@ -100,9 +100,12 @@ dialog[open]::backdrop {
      katman. Zayıf cihazda belleği ve çizimi en çok yoran şey budur. */
   backface-visibility: visible !important;
 }
-/* Düşen kart yarımları hafif görünümde hiç kullanılmaz. */
+/* Düşen kart yarımları hafif görünümde yalnızca düşüş sırasında görünür
+   (FlapCell.tsx → liteFlip satır içi stille açar). */
 [data-lite] [data-half]:nth-child(n + 3) {
-  display: none !important;
+  display: none;
+  visibility: visible !important;
+  transform: none;
 }
 [data-lite] .flap-cell {
   perspective: none !important;
@@ -118,6 +121,14 @@ dialog[open]::backdrop {
 }
 [data-lite] .flap-cell > [data-half]:nth-child(2) {
   background: #161616;
+}
+[data-lite] .flap-cell > [data-half]:nth-child(3) {
+  background: #1d1d1d;
+  z-index: 2;
+}
+[data-lite] .flap-cell > [data-half]:nth-child(4) {
+  background: #161616;
+  z-index: 2;
 }
 /* Geçiş efektleri de kapalı: kontroller ve pencere anında görünüp kaybolur. */
 [data-lite] *,

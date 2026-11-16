@@ -62,8 +62,11 @@ let lite = false;
 export const setLiteMode = (on: boolean) => {
   lite = on;
 };
-const LITE_STEP_MS = 80; // bir harfin ekranda kalma süresi
-const LITE_STEPS = 3; // hedeften önce gösterilen harf sayısı
+const LITE_STEP_MS = 95; // bir kart düşüşü (ortak saatin bir adımı)
+// Hedeften önce düşen kart sayısı: her hücrede farklı, böylece hücreler
+// gerçek panodaki gibi farklı anlarda yerine oturur.
+const LITE_MIN_STEPS = 3;
+const LITE_MAX_STEPS = 7;
 
 type LiteJob = { engine: FlapEngine; at: number; seq: string[]; k: number };
 const liteJobs = new Set<LiteJob>();
@@ -83,7 +86,8 @@ function liteTick() {
       settled = true;
     }
   }
-  if (settled) tick();
+  // Her adımda en az bir kart düştüyse tık sesi (sound.ts kendisi seyreltir).
+  if (settled || liteJobs.size > 0) tick();
   liteTimer = liteJobs.size > 0 ? setTimeout(liteTick, LITE_STEP_MS) : undefined;
 }
 
@@ -96,9 +100,10 @@ function startLite(job: LiteJob) {
 function leadIn(target: string): string[] {
   const i = PLAIN.indexOf(target);
   const end = i < 0 ? PLAIN.length : i;
+  const steps = LITE_MIN_STEPS + Math.floor(Math.random() * (LITE_MAX_STEPS - LITE_MIN_STEPS + 1));
   return Array.from(
-    { length: LITE_STEPS },
-    (_, n) => PLAIN[(end - LITE_STEPS + n + PLAIN.length) % PLAIN.length],
+    { length: steps },
+    (_, n) => PLAIN[(end - steps + n + PLAIN.length) % PLAIN.length],
   );
 }
 
@@ -120,6 +125,9 @@ class FlapEngine {
   private halves: HTMLElement[];
   private spans: HTMLElement[];
   private reduced: boolean;
+  private flipId = 0; // hafif düşüş: geç kalan bir önceki düşüş yenisini bozmasın
+  private liteTo: string | null = null; // süren hafif düşüşün hedef yaprağı
+  private liteAnims: Animation[] = [];
 
   constructor(root: HTMLElement) {
     // Sıra: sabit üst, sabit alt, düşen üst, düşen alt
@@ -232,28 +240,80 @@ class FlapEngine {
   liteStep(job: LiteJob): boolean {
     if (!this.alive) return true;
     if (job.k < job.seq.length) {
-      this.showFace(job.seq[job.k++]);
+      this.liteFlip(job.seq[job.k++]);
       return false;
     }
     this.idx = this.target;
-    this.showFace(CHARS[this.idx]);
+    this.liteFlip(CHARS[this.idx]);
     this.running = false;
     return true;
   }
 
-  /** İki sabit yarıma aynı yaprağı koyar; değişmeyeni yeniden yazmaz. */
-  private showFace(char: string) {
-    if (char === this.face) return;
-    const wasColor = !!COLOR_CARDS[this.face];
-    this.face = char;
+  /**
+   * Hafif görünümdeki kart düşüşü: eski harfin üst yarısı menteşeye doğru
+   * katlanır, sonra yeni harfin alt yarısı açılır. Yalnızca `scaleY` canlandırılır;
+   * tarayıcı bunu grafik işlemcide yapar, sayfayı yeniden çizmez. 3B, gölge ve
+   * filtre yoktur. Düşen yarımlar yalnızca düşüş sırasında görünür.
+   */
+  private liteFlip(next: string) {
+    // Önceki düşüş bitmediyse (ekran kareleri gecikti) hemen tamamlanır.
+    if (this.liteTo !== null) this.liteSettle(this.liteTo);
+    const cur = this.face;
+    if (next === cur) return;
+    const [, , fTop, fBot] = this.halves;
+    const id = ++this.flipId;
+    this.liteTo = next;
+    this.face = next;
+    this.paint(2, cur); // düşen üst: eski harf
+    this.paint(3, next); // açılan alt: yeni harf
+    this.paint(0, next); // arkada yeni harfin üstü hazır
+    fTop.style.display = "block";
+    fBot.style.display = "block";
+    fBot.style.transform = "scaleY(0)";
+    const a = fTop.animate([{ transform: "scaleY(1)" }, { transform: "scaleY(0)" }], {
+      duration: LITE_STEP_MS * 0.45,
+      easing: "ease-in",
+    });
+    this.liteAnims = [a];
+    a.onfinish = () => {
+      if (id !== this.flipId || !this.alive) return;
+      fTop.style.display = "";
+      const b = fBot.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], {
+        duration: LITE_STEP_MS * 0.4,
+        easing: "ease-out",
+      });
+      this.liteAnims = [b];
+      b.onfinish = () => {
+        if (id === this.flipId) this.liteSettle(next);
+      };
+    };
+    // Animasyon hiç bitmezse (ör. ekran çizilmiyor) kart yine de yerine oturur.
+    setTimeout(() => {
+      if (id === this.flipId && this.liteTo === next) this.liteSettle(next);
+    }, LITE_STEP_MS * 3);
+  }
+
+  /** Düşüşü bitirir: iki sabit yarımda `char`, düşen yarımlar gizli. */
+  private liteSettle(char: string) {
+    for (const a of this.liteAnims) a.cancel();
+    this.liteAnims = [];
+    this.liteTo = null;
+    this.paint(0, char);
+    this.paint(1, char);
+    const [, , fTop, fBot] = this.halves;
+    fTop.style.display = "";
+    fBot.style.display = "";
+    fBot.style.transform = "";
+  }
+
+  /** Bir yarıma yaprak koyar; aynısı zaten oradaysa dokunmaz. */
+  private paint(i: number, char: string) {
+    const span = this.spans[i];
     const color = COLOR_CARDS[char];
-    for (const i of [0, 1]) {
-      this.spans[i].textContent = color ? "" : char;
-      if (color || wasColor)
-        this.halves[i].style.background = color
-          ? `linear-gradient(rgba(255,255,255,.1), rgba(0,0,0,.14)), ${color}`
-          : "";
-    }
+    const text = color ? "" : char;
+    if (span.textContent !== text) span.textContent = text;
+    const bg = color ? `linear-gradient(rgba(255,255,255,.1), rgba(0,0,0,.14)), ${color}` : "";
+    if (this.halves[i].style.background !== bg) this.halves[i].style.background = bg;
   }
 
   /**
