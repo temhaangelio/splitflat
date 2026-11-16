@@ -106,6 +106,18 @@ dialog[open]::backdrop {
 }
 [data-lite] .flap-cell {
   perspective: none !important;
+  /* Bir hücrenin harfi değişince yalnızca o hücre yeniden çizilir; sayfanın
+     geri kalanı yerleşim ve çizim hesabına girmez. */
+  contain: layout paint style;
+}
+/* Gradyan yerine düz renk: her harf değişiminde yeniden çizmesi çok daha
+   ucuz. Üst yarım biraz açık, alt yarım biraz koyu; renkli kartlar satır içi
+   stille bunun üstüne yazılır. */
+[data-lite] .flap-cell > [data-half]:nth-child(1) {
+  background: #1d1d1d;
+}
+[data-lite] .flap-cell > [data-half]:nth-child(2) {
+  background: #161616;
 }
 /* Geçiş efektleri de kapalı: kontroller ve pencere anında görünüp kaybolur. */
 [data-lite] *,

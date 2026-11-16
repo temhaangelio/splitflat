@@ -53,16 +53,54 @@ const FAST_MS = 60;
 const FAST_STEP = 4;
 
 // Hafif görünüm: zayıf cihazlar (ör. Raspberry Pi Zero 2 W) için. Açıkken kart
-// çevirme animasyonu hiç çalışmaz: değişen hücre birkaç rastgele karakterden
-// geçip hedefi doğrudan yazar, harfi değişmeyen hücre hiç dokunulmaz. Tarayıcıya
-// düşen iş, hücre başına birkaç metin değişikliğinden ibarettir. Tüm hücreler
-// için ortak olduğundan modül düzeyinde tutulur.
+// çevirme animasyonu çalışmaz: yeni içerik gelince her hücre, hedefinden önceki
+// birkaç harften sırayla geçip hedefe oturur (tamburun son yaprakları gibi).
+// Bütün hücreler tek bir saatle, aynı ekran karesinde güncellenir; böylece zayıf
+// işlemcide bile ritim bozulmaz. Tarayıcıya düşen iş, adım başına birkaç metin
+// değişikliğidir.
 let lite = false;
 export const setLiteMode = (on: boolean) => {
   lite = on;
 };
-const LITE_STEP_MS = 90; // ara karakterlerin ekranda kalma süresi
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const LITE_STEP_MS = 80; // bir harfin ekranda kalma süresi
+const LITE_STEPS = 3; // hedeften önce gösterilen harf sayısı
+
+type LiteJob = { engine: FlapEngine; at: number; seq: string[]; k: number };
+const liteJobs = new Set<LiteJob>();
+let liteTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * Ortak saat: her adımda, zamanı gelmiş bütün hücreleri tek seferde ilerletir.
+ * Yazımların hepsi aynı görevde yapıldığı için ekrana aynı karede çıkar.
+ */
+function liteTick() {
+  const now = performance.now();
+  let settled = false;
+  for (const job of liteJobs) {
+    if (now < job.at) continue;
+    if (job.engine.liteStep(job)) {
+      liteJobs.delete(job);
+      settled = true;
+    }
+  }
+  if (settled) tick();
+  liteTimer = liteJobs.size > 0 ? setTimeout(liteTick, LITE_STEP_MS) : undefined;
+}
+
+function startLite(job: LiteJob) {
+  liteJobs.add(job);
+  liteTimer ??= setTimeout(liteTick, 0);
+}
+
+/** Hedeften önceki birkaç harf (alfabe sırasıyla); boşluğa giderken son harfler. */
+function leadIn(target: string): string[] {
+  const i = PLAIN.indexOf(target);
+  const end = i < 0 ? PLAIN.length : i;
+  return Array.from(
+    { length: LITE_STEPS },
+    (_, n) => PLAIN[(end - LITE_STEPS + n + PLAIN.length) % PLAIN.length],
+  );
+}
 
 /**
  * Animasyon motoru React'in dışında, doğrudan DOM üzerinde çalışır: bir harf
@@ -119,7 +157,12 @@ class FlapEngine {
     if (kicked && lite && !this.reduced) {
       // Yeni içerik (not, saat, hava durumu): harfi aynı kalan hücre de çalışır.
       this.running = true;
-      this.timer = setTimeout(() => void this.runLite(), delay);
+      startLite({
+        engine: this,
+        at: performance.now() + delay,
+        seq: leadIn(CHARS[this.target]),
+        k: 0,
+      });
       return;
     }
     if (kicked && !this.reduced) {
@@ -182,22 +225,35 @@ class FlapEngine {
     this.running = false;
   }
 
-  /** Hafif görünümdeki geçiş: animasyon yok, birkaç ara karakter ve hedef. */
-  private async runLite() {
-    const steps = 2 + Math.floor(Math.random() * 3);
-    for (let k = 0; k < steps && this.alive; k++) {
-      const ch = PLAIN[Math.floor(Math.random() * PLAIN.length)];
-      this.show(0, ch);
-      this.show(1, ch);
-      await sleep(LITE_STEP_MS);
+  /**
+   * Hafif görünümde bir adım (ortak saat çağırır). Hücre bittiyse true döner.
+   * Son adımda her zaman en güncel hedef yazılır.
+   */
+  liteStep(job: LiteJob): boolean {
+    if (!this.alive) return true;
+    if (job.k < job.seq.length) {
+      this.showFace(job.seq[job.k++]);
+      return false;
     }
-    // Beklerken hedef değişmiş olabilir; her zaman en güncel hedef yazılır.
     this.idx = this.target;
-    this.face = CHARS[this.idx];
-    this.show(0, this.face);
-    this.show(1, this.face);
+    this.showFace(CHARS[this.idx]);
     this.running = false;
-    tick();
+    return true;
+  }
+
+  /** İki sabit yarıma aynı yaprağı koyar; değişmeyeni yeniden yazmaz. */
+  private showFace(char: string) {
+    if (char === this.face) return;
+    const wasColor = !!COLOR_CARDS[this.face];
+    this.face = char;
+    const color = COLOR_CARDS[char];
+    for (const i of [0, 1]) {
+      this.spans[i].textContent = color ? "" : char;
+      if (color || wasColor)
+        this.halves[i].style.background = color
+          ? `linear-gradient(rgba(255,255,255,.1), rgba(0,0,0,.14)), ${color}`
+          : "";
+    }
   }
 
   /**
@@ -220,7 +276,10 @@ class FlapEngine {
     const shade = sBot.animate(
       [
         { filter: "brightness(1)", boxShadow: "inset 0 0 0 0 rgba(0,0,0,0)" },
-        { filter: "brightness(.45)", boxShadow: "inset 0 .9em .5em -.2em rgba(0,0,0,.9)" },
+        {
+          filter: "brightness(.45)",
+          boxShadow: "inset 0 .9em .5em -.2em rgba(0,0,0,.9)",
+        },
       ],
       { duration: ms, easing: "ease-in", fill: "forwards" },
     );
@@ -234,7 +293,11 @@ class FlapEngine {
       [
         { transform: "rotateX(0deg)", filter: "brightness(1)" },
         // öne eğilirken tepeden gelen ışığı alır, yan dönünce kararır
-        { transform: "rotateX(-38deg)", filter: "brightness(1.18)", offset: 0.6 },
+        {
+          transform: "rotateX(-38deg)",
+          filter: "brightness(1.18)",
+          offset: 0.6,
+        },
         { transform: "rotateX(-90deg)", filter: "brightness(.3)" },
       ],
       { duration: fall, easing: "cubic-bezier(.45,0,1,.55)" },
@@ -322,11 +385,7 @@ export default function FlapCell({
   }, [char, delay, colors, spin, instant]);
 
   return (
-    <div
-      ref={root}
-      aria-hidden
-      className={CELL}
-    >
+    <div ref={root} aria-hidden className={CELL}>
       <div data-half className={`${HALF} ${TOP}`}>
         <span className={`${GLYPH} top-0`} />
       </div>
