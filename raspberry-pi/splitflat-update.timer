@@ -1,11 +1,11 @@
-# GitHub'a açılıştan iki dakika sonra, sonra beş dakikada bir bakar.
+# GitHub'a açılıştan bir dakika sonra, sonra dakikada bir bakar.
 [Unit]
 Description=Split Flap otomatik güncelleme zamanlayıcısı
 
 [Timer]
-OnBootSec=2min
-OnUnitActiveSec=5min
-RandomizedDelaySec=30s
+OnBootSec=1min
+OnUnitActiveSec=1min
+RandomizedDelaySec=5s
 
 [Install]
 WantedBy=timers.target

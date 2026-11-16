@@ -15,7 +15,7 @@ sudo systemctl daemon-reload
 # Kullanıcı kapattıysa yeniden açılmaz; ilk kurulumda açılır.
 if [ ! -f "$HOME/.splitflat/no-auto-update" ]; then
   sudo systemctl enable --now splitflat-update.timer >/dev/null 2>&1
-  echo "otomatik güncelleme: açık (5 dakikada bir)"
+  echo "otomatik güncelleme: açık (dakikada bir)"
 else
   echo "otomatik güncelleme: kapalı (~/.splitflat/no-auto-update)"
 fi

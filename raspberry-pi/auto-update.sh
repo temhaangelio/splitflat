@@ -1,6 +1,6 @@
 #!/bin/bash
 # Otomatik güncelleme: GitHub'da yeni bir sürüm varsa update.sh'ı çalıştırır.
-# splitflat-update.timer beş dakikada bir çağırır; internet yoksa sessizce çıkar.
+# splitflat-update.timer dakikada bir çağırır; internet yoksa sessizce çıkar.
 # Elle denemek için:  bash ~/splitflat/raspberry-pi/auto-update.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."

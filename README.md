@@ -55,7 +55,7 @@ WiFi sıfırlandıktan sonra telefon panoya ulaşamaz; ekrandaki kurulum adımla
 
 ### Güncelleme
 
-Pi, GitHub'a açılıştan iki dakika sonra ve sonra beş dakikada bir bakar; yeni bir commit varsa `update.sh`'ı kendisi çalıştırır (`splitflat-update.timer`). Yani `git push` sonrası en geç birkaç dakikada pano yeni sürüme geçer. İnternet yoksa sessizce bekler; Pi'deki kopyada elle değişiklik varsa dokunmaz.
+Pi, GitHub'a açılıştan bir dakika sonra ve sonra dakikada bir bakar; yeni bir commit varsa `update.sh`'ı kendisi çalıştırır (`splitflat-update.timer`). Yani `git push` sonrası yaklaşık bir dakika içinde pano yeni sürüme geçer. İnternet yoksa sessizce bekler; Pi'deki kopyada elle değişiklik varsa dokunmaz.
 
 ```bash
 journalctl -u splitflat-update        # otomatik güncelleme günlüğü
@@ -104,7 +104,7 @@ npm run release      # siteyi ve sunucuyu raspberry-pi/ altına derler
 git add -A && git commit && git push
 ```
 
-Pi birkaç dakika içinde kendisi günceller.
+Pi yaklaşık bir dakika içinde kendisi günceller.
 
 ## Güvenlik
 
