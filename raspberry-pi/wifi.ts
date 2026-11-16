@@ -4,8 +4,9 @@
 // ağını aynı şifreyle yeniden açar ve hatayı bildirir.
 //
 // WiFi'yi NetworkManager'ın komut satırı aracı nmcli yönetir. Sunucu yönetici
-// değil, normal kullanıcı olarak çalıştığı için nmcli `sudo -n` ile çağrılır;
-// install.sh buna yalnızca nmcli için izin veren bir kural ekler.
+// değil, normal kullanıcı olarak çalıştığı için ağı değiştiren nmcli komutları
+// `sudo -n` ile çağrılır; install.sh buna yalnızca nmcli için izin veren bir
+// kural ekler. Yalnızca okuyan komutlar sudo'suz çalışır.
 //
 // Ortam değişkenleri (geliştirme ve deneme için):
 //   SPLITFLAT_NMCLI          nmcli yerine kullanılacak program
@@ -75,9 +76,15 @@ let busy = false;
 
 class NmcliMissing extends Error {}
 
-function nmcli(args: string[], timeoutMs = 20_000): Promise<string> {
-  const cmd = USE_SUDO ? "sudo" : NMCLI;
-  const argv = USE_SUDO ? ["-n", NMCLI, ...args] : args;
+/**
+ * nmcli'yi çalıştırır. Değiştiren komutlar `sudo` ile çalışır. Yalnızca okuyan
+ * komutlar (`read`) yönetici yetkisi istemez; sudo'suz çalışır ki sunucu her
+ * 10 saniyede bir sistem günlüğüne "sudo oturumu açıldı" yazmasın.
+ */
+function nmcli(args: string[], timeoutMs = 20_000, read = false): Promise<string> {
+  const sudo = USE_SUDO && !read;
+  const cmd = sudo ? "sudo" : NMCLI;
+  const argv = sudo ? ["-n", NMCLI, ...args] : args;
   return new Promise((resolve, reject) => {
     execFile(cmd, argv, { timeout: timeoutMs }, (err, stdout, stderr) => {
       if (!err) return resolve(stdout);
@@ -105,7 +112,7 @@ function fields(line: string): string[] {
 
 /** WiFi arayüzü kurulum ağı dışında bir ağa bağlıysa o ağın bağlantı adı. */
 async function connectedTo(): Promise<string | null> {
-  const out = await nmcli(["-t", "-f", "DEVICE,STATE,CONNECTION", "dev", "status"]);
+  const out = await nmcli(["-t", "-f", "DEVICE,STATE,CONNECTION", "dev", "status"], 20_000, true);
   for (const line of out.split("\n")) {
     const [dev, st, con] = fields(line);
     if (dev === IFACE && st === "connected" && con && con !== SETUP_CON) return con;
@@ -116,7 +123,7 @@ async function connectedTo(): Promise<string | null> {
 /** Pi'de kayıtlı bir WiFi ağı var mı? Yoksa açılışta beklemenin anlamı yok. */
 async function hasSavedWifi(): Promise<boolean> {
   try {
-    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"]);
+    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"], 20_000, true);
     return out
       .split("\n")
       .map(fields)
@@ -194,7 +201,7 @@ async function openSetup() {
     "dev", "wifi", "hotspot", "ifname", IFACE, "con-name", SETUP_CON,
     "ssid", SETUP_SSID, "password", setupPassword,
   ]);
-  const ip = (await nmcli(["-g", "IP4.ADDRESS", "dev", "show", IFACE]).catch(() => ""))
+  const ip = (await nmcli(["-g", "IP4.ADDRESS", "dev", "show", IFACE], 20_000, true).catch(() => ""))
     .split("\n")[0]
     .split("/")[0]
     .trim();

@@ -91,9 +91,10 @@ var setupPassword = "";
 var busy = false;
 var NmcliMissing = class extends Error {
 };
-function nmcli(args, timeoutMs = 2e4) {
-  const cmd = USE_SUDO ? "sudo" : NMCLI;
-  const argv = USE_SUDO ? ["-n", NMCLI, ...args] : args;
+function nmcli(args, timeoutMs = 2e4, read = false) {
+  const sudo = USE_SUDO && !read;
+  const cmd = sudo ? "sudo" : NMCLI;
+  const argv = sudo ? ["-n", NMCLI, ...args] : args;
   return new Promise((resolve, reject) => {
     execFile(cmd, argv, { timeout: timeoutMs }, (err, stdout, stderr) => {
       if (!err) return resolve(stdout);
@@ -117,7 +118,7 @@ function fields(line) {
   return out;
 }
 async function connectedTo() {
-  const out = await nmcli(["-t", "-f", "DEVICE,STATE,CONNECTION", "dev", "status"]);
+  const out = await nmcli(["-t", "-f", "DEVICE,STATE,CONNECTION", "dev", "status"], 2e4, true);
   for (const line of out.split("\n")) {
     const [dev, st, con] = fields(line);
     if (dev === IFACE && st === "connected" && con && con !== SETUP_CON) return con;
@@ -126,7 +127,7 @@ async function connectedTo() {
 }
 async function hasSavedWifi() {
   try {
-    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"]);
+    const out = await nmcli(["-t", "-f", "TYPE,NAME", "con", "show"], 2e4, true);
     return out.split("\n").map(fields).some(([type, name]) => type === "802-11-wireless" && name !== SETUP_CON);
   } catch {
     return true;
@@ -191,7 +192,7 @@ async function openSetup() {
     "password",
     setupPassword
   ]);
-  const ip = (await nmcli(["-g", "IP4.ADDRESS", "dev", "show", IFACE]).catch(() => "")).split("\n")[0].split("/")[0].trim();
+  const ip = (await nmcli(["-g", "IP4.ADDRESS", "dev", "show", IFACE], 2e4, true).catch(() => "")).split("\n")[0].split("/")[0].trim();
   state.setup = { ssid: SETUP_SSID, password: setupPassword, address: ip || "10.42.0.1" };
   state.mode = "setup";
   state.step = "join";
