@@ -16,7 +16,7 @@ A split-flap board for your home. It runs on a Raspberry Pi: the attached screen
 Raspberry Pi OS ya da FullPageOS üzerinde, Pi'ye SSH ile bağlanıp:
 
 ```bash
-git clone https://github.com/temhaangelio/splitflat.app.git ~/splitflat
+git clone https://github.com/temhaangelio/splitflat.git ~/splitflat
 bash ~/splitflat/raspberry-pi/install.sh
 sudo reboot
 ```
