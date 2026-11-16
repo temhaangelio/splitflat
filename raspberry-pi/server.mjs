@@ -73,6 +73,202 @@ function parseShared(input) {
   };
 }
 
+// raspberry-pi/wifi.ts
+import { execFile } from "node:child_process";
+import { randomInt } from "node:crypto";
+var NMCLI = process.env.SPLITFLAT_NMCLI || "nmcli";
+var USE_SUDO = process.env.SPLITFLAT_NMCLI_SUDO !== "0";
+var IFACE = process.env.SPLITFLAT_WIFI_IFACE || "wlan0";
+var BOOT_WAIT_MS = Number(process.env.SPLITFLAT_WIFI_WAIT_MS) || 6e4;
+var CHECK_MS = 1e4;
+var LOST_MS = 3 * 6e4;
+var SETUP_CON = "splitflap-setup";
+var SETUP_SSID = "Split Flap Kurulum";
+var state = { mode: "checking", networks: [] };
+var setupPassword = "";
+var busy = false;
+var NmcliMissing = class extends Error {
+};
+function nmcli(args, timeoutMs = 2e4) {
+  const cmd = USE_SUDO ? "sudo" : NMCLI;
+  const argv = USE_SUDO ? ["-n", NMCLI, ...args] : args;
+  return new Promise((resolve, reject) => {
+    execFile(cmd, argv, { timeout: timeoutMs }, (err, stdout, stderr) => {
+      if (!err) return resolve(stdout);
+      if (err.code === "ENOENT") return reject(new NmcliMissing());
+      reject(new Error(`${stderr || ""}${stdout || ""}`.trim() || err.message));
+    });
+  });
+}
+function fields(line) {
+  const out = [];
+  let cur = "";
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === "\\" && i + 1 < line.length) cur += line[++i];
+    else if (ch === ":") {
+      out.push(cur);
+      cur = "";
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+async function connectedTo() {
+  const out = await nmcli(["-t", "-f", "DEVICE,STATE,CONNECTION", "dev", "status"]);
+  for (const line of out.split("\n")) {
+    const [dev, st, con] = fields(line);
+    if (dev === IFACE && st === "connected" && con && con !== SETUP_CON) return con;
+  }
+  return null;
+}
+async function scan() {
+  const out = await nmcli(
+    ["-t", "-f", "SSID,SIGNAL,SECURITY", "dev", "wifi", "list", "--rescan", "yes", "ifname", IFACE],
+    3e4
+  );
+  const best = /* @__PURE__ */ new Map();
+  for (const line of out.split("\n")) {
+    const [ssid, signal, security] = fields(line);
+    if (!ssid || ssid === SETUP_SSID) continue;
+    const n = { ssid, signal: Number(signal) || 0, secure: !!security && security !== "--" };
+    const prev = best.get(ssid);
+    if (!prev || prev.signal < n.signal) best.set(ssid, n);
+  }
+  return [...best.values()].sort((a, b) => b.signal - a.signal).slice(0, 30);
+}
+var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function newPassword() {
+  const abc = "abcdefghjkmnpqrstuvwxyz23456789";
+  return Array.from({ length: 8 }, () => abc[randomInt(abc.length)]).join("");
+}
+async function openSetup() {
+  state.networks = await scan().catch(() => state.networks);
+  if (!setupPassword) setupPassword = newPassword();
+  await nmcli(["con", "delete", SETUP_CON]).catch(() => {
+  });
+  await nmcli([
+    "dev",
+    "wifi",
+    "hotspot",
+    "ifname",
+    IFACE,
+    "con-name",
+    SETUP_CON,
+    "ssid",
+    SETUP_SSID,
+    "password",
+    setupPassword
+  ]);
+  const ip = (await nmcli(["-g", "IP4.ADDRESS", "dev", "show", IFACE]).catch(() => "")).split("\n")[0].split("/")[0].trim();
+  state.setup = { ssid: SETUP_SSID, password: setupPassword, address: ip || "10.42.0.1" };
+  state.mode = "setup";
+  state.ssid = void 0;
+  console.log(`WiFi kurulum a\u011F\u0131 a\xE7\u0131k: ${SETUP_SSID} (${state.setup.address})`);
+}
+async function closeSetup() {
+  await nmcli(["con", "down", SETUP_CON]).catch(() => {
+  });
+  await nmcli(["con", "delete", SETUP_CON]).catch(() => {
+  });
+  state.setup = void 0;
+}
+function classify(message) {
+  const m = message.toLowerCase();
+  if (m.includes("secrets were required") || m.includes("psk") || m.includes("password"))
+    return "wrong_password";
+  if (m.includes("no network with ssid")) return "not_found";
+  if (m.includes("ip configuration")) return "no_address";
+  return "failed";
+}
+async function connect(ssid, password) {
+  busy = true;
+  state.mode = "connecting";
+  state.ssid = ssid;
+  state.error = void 0;
+  try {
+    await closeSetup();
+    await sleep(2e3);
+    await nmcli(["dev", "wifi", "list", "--rescan", "yes", "ifname", IFACE], 3e4).catch(() => {
+    });
+    const args = ["dev", "wifi", "connect", ssid];
+    if (password) args.push("password", password);
+    args.push("ifname", IFACE);
+    await nmcli(args, 6e4);
+    state.mode = "online";
+    state.networks = [];
+    console.log(`WiFi: ${ssid} a\u011F\u0131na ba\u011Fland\u0131`);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`WiFi: ${ssid} a\u011F\u0131na ba\u011Flan\u0131lamad\u0131: ${message}`);
+    state.error = classify(message);
+    await nmcli(["con", "delete", "id", ssid]).catch(() => {
+    });
+    await openSetup().catch((err) => console.error("Kurulum a\u011F\u0131 yeniden a\xE7\u0131lamad\u0131:", err));
+  } finally {
+    busy = false;
+  }
+}
+function wifiState(includePassword) {
+  if (includePassword || !state.setup) return state;
+  return { ...state, setup: { ...state.setup, password: "" } };
+}
+function fromSetupNetwork(address) {
+  if (!state.setup) return false;
+  const ip = address.replace(/^::ffff:/, "");
+  const prefix = state.setup.address.split(".").slice(0, 3).join(".") + ".";
+  return ip.startsWith(prefix);
+}
+function requestConnect(ssid, password) {
+  if (state.mode !== "setup" || busy) return "not_in_setup";
+  if (typeof ssid !== "string" || !ssid || Buffer.byteLength(ssid) > 32) return "bad_ssid";
+  if (typeof password !== "string") return "bad_password";
+  if (password && (password.length < 8 || password.length > 63)) return "bad_password";
+  void connect(ssid, password);
+  return null;
+}
+async function startWifi() {
+  try {
+    await connectedTo();
+  } catch (e) {
+    if (e instanceof NmcliMissing) {
+      state.mode = "unsupported";
+      console.log("WiFi kurulumu kapal\u0131: nmcli bulunamad\u0131.");
+      return;
+    }
+    console.error("WiFi durumu okunamad\u0131; kurulum a\u011F\u0131 devre d\u0131\u015F\u0131.", e);
+    state.mode = "unsupported";
+    return;
+  }
+  const started = Date.now();
+  let lostSince = null;
+  const tick = async () => {
+    if (busy || state.mode === "setup" || state.mode === "connecting") return;
+    const con = await connectedTo().catch(() => null);
+    if (con) {
+      state.mode = "online";
+      state.ssid = con;
+      lostSince = null;
+      return;
+    }
+    if (state.mode === "checking" && Date.now() - started < BOOT_WAIT_MS) return;
+    if (state.mode === "online") {
+      lostSince ??= Date.now();
+      if (Date.now() - lostSince < LOST_MS) return;
+    }
+    busy = true;
+    try {
+      await openSetup();
+    } catch (e) {
+      console.error("Kurulum a\u011F\u0131 a\xE7\u0131lamad\u0131:", e);
+    } finally {
+      busy = false;
+    }
+  };
+  await tick();
+  setInterval(() => void tick(), CHECK_MS);
+}
+
 // raspberry-pi/server.ts
 var PORT = Number(process.env.PORT) || 8080;
 var HERE = dirname(fileURLToPath(import.meta.url));
@@ -214,6 +410,26 @@ function lanOrigin() {
   }
   return null;
 }
+var isLocal = (req) => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress ?? "");
+async function wifi(req, res, url) {
+  if (url.pathname === "/api/wifi" && req.method === "GET") {
+    const state2 = wifiState(isLocal(req));
+    return json(res, 200, {
+      ...state2,
+      setupUrl: state2.setup ? `http://${state2.setup.address}:${PORT}/setup` : null
+    });
+  }
+  if (url.pathname === "/api/wifi/connect" && req.method === "POST") {
+    const address = req.socket.remoteAddress ?? "";
+    if (!isLocal(req) && !fromSetupNetwork(address)) return fail(res, 403, "forbidden");
+    if (!withinLimit(address)) return fail(res, 429, "rate_limited");
+    const body = await readBody(req);
+    const error = requestConnect(body?.ssid, body?.password);
+    if (error) return fail(res, error === "not_in_setup" ? 409 : 400, error);
+    return json(res, 202, { ok: true });
+  }
+  return fail(res, 404, "not_found");
+}
 var TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -267,6 +483,7 @@ createServer((req, res) => {
   try {
     if (url.pathname === "/api/board") return void board(req, res, url).catch(done);
     if (url.pathname === "/api/host") return json(res, 200, { origin: lanOrigin() });
+    if (url.pathname.startsWith("/api/wifi")) return void wifi(req, res, url).catch(done);
     if (url.pathname.startsWith("/api/")) return fail(res, 404, "not_found");
     if (req.method !== "GET" && req.method !== "HEAD") return fail(res, 405, "method_not_allowed");
     serveFile(res, url.pathname, req.method === "HEAD");
@@ -276,4 +493,5 @@ createServer((req, res) => {
 }).listen(PORT, () => {
   console.log(`Split Flap: http://localhost:${PORT}  (ev a\u011F\u0131nda: ${lanOrigin() ?? "adres bulunamad\u0131"})`);
   console.log(`Kay\u0131tlar: ${DATA_FILE}`);
+  void startWifi();
 });

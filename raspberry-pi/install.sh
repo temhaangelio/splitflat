@@ -11,6 +11,8 @@
 #      Chromium'un "1 GB'tan az bellek" uyarısını kapatır ve FullPageOS
 #      logosunu Split Flap açılış görseliyle değiştirir.
 #   4. Pi açılırken ekrana akan sistem yazılarını gizler.
+#   5. Pi bir ağa bağlanamazsa kendi kurulum ağını açabilsin diye sunucuya
+#      yalnızca nmcli için izin verir (bkz. wifi.ts).
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -23,6 +25,9 @@ if ! command -v node >/dev/null; then
   sudo apt-get install -y nodejs
 fi
 node --version
+
+echo "==> İnternet kurulumu izni"
+bash "$DIR/wifi-permission.sh"
 
 echo "==> Servis"
 sed -e "s|__USER__|$USER_NAME|" -e "s|__DIR__|$DIR|" "$DIR/splitflat.service" |

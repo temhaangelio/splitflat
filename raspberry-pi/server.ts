@@ -2,6 +2,8 @@
 //
 //   1. Derlenmiş siteyi (./site) sunmak: pano, telefon kumandası, Hakkında.
 //   2. Pano kaydını tutmak (/api/board): telefon yazar, pano okur.
+//   3. İnternet kurulumu (/api/wifi): Pi bir ağa bağlı değilse kendi kurulum
+//      ağını açar, telefon oradan evin ağını seçer (bkz. wifi.ts).
 //
 // Yalnızca Node'un kendi modüllerini kullanır; Pi'de `npm install` gerekmez.
 // Bu dosya `npm run release` ile server.mjs olarak paketlenir ve Pi'de o
@@ -21,6 +23,7 @@ import { homedir, networkInterfaces } from "node:os";
 import { dirname, extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseShared, type Shared } from "../lib/board";
+import { fromSetupNetwork, requestConnect, startWifi, wifiState } from "./wifi";
 
 const PORT = Number(process.env.PORT) || 8080;
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -211,6 +214,36 @@ function lanOrigin() {
   return null;
 }
 
+/* ---------- /api/wifi ---------- */
+//
+//   GET   /api/wifi           internet kurulumunun durumu (pano ve telefon sorar)
+//   POST  /api/wifi/connect   seçilen ağa bağlan (yalnızca kurulum ağındaki telefondan)
+
+const isLocal = (req: IncomingMessage) =>
+  ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress ?? "");
+
+async function wifi(req: IncomingMessage, res: ServerResponse, url: URL) {
+  if (url.pathname === "/api/wifi" && req.method === "GET") {
+    // Kurulum ağının şifresi yalnızca panoya (aynı cihaz) verilir; telefon ağa
+    // bağlanmışsa onu zaten biliyordur.
+    const state = wifiState(isLocal(req));
+    return json(res, 200, {
+      ...state,
+      setupUrl: state.setup ? `http://${state.setup.address}:${PORT}/setup` : null,
+    });
+  }
+  if (url.pathname === "/api/wifi/connect" && req.method === "POST") {
+    const address = req.socket.remoteAddress ?? "";
+    if (!isLocal(req) && !fromSetupNetwork(address)) return fail(res, 403, "forbidden");
+    if (!withinLimit(address)) return fail(res, 429, "rate_limited");
+    const body = await readBody(req);
+    const error = requestConnect(body?.ssid, body?.password);
+    if (error) return fail(res, error === "not_in_setup" ? 409 : 400, error);
+    return json(res, 202, { ok: true });
+  }
+  return fail(res, 404, "not_found");
+}
+
 /* ---------- Site dosyaları ---------- */
 
 const TYPES: Record<string, string> = {
@@ -279,6 +312,7 @@ createServer((req, res) => {
   try {
     if (url.pathname === "/api/board") return void board(req, res, url).catch(done);
     if (url.pathname === "/api/host") return json(res, 200, { origin: lanOrigin() });
+    if (url.pathname.startsWith("/api/wifi")) return void wifi(req, res, url).catch(done);
     if (url.pathname.startsWith("/api/")) return fail(res, 404, "not_found");
     if (req.method !== "GET" && req.method !== "HEAD") return fail(res, 405, "method_not_allowed");
     serveFile(res, url.pathname, req.method === "HEAD");
@@ -288,4 +322,5 @@ createServer((req, res) => {
 }).listen(PORT, () => {
   console.log(`Split Flap: http://localhost:${PORT}  (ev ağında: ${lanOrigin() ?? "adres bulunamadı"})`);
   console.log(`Kayıtlar: ${DATA_FILE}`);
+  void startWifi();
 });

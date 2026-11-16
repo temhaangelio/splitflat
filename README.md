@@ -30,6 +30,17 @@ sudo reboot
 
 Pi açılınca ekranda QR görünür; telefonla okutun.
 
+### İnternet kurulumu (ağ yoksa)
+
+Pi açıldıktan sonra bir dakika içinde hiçbir WiFi ağına bağlanamazsa (ya da bağlantı üç dakikadan uzun koparsa) kendi kurulum ağını açar: **Split Flap Kurulum**. Ekranda iki kod görünür:
+
+1. Telefonla okutun: telefon kurulum ağına bağlanır (ağın şifresi ekranda yazar).
+2. Okutun: kurulum sayfası (`/setup`) açılır; listeden evin ağını seçip şifresini girin.
+
+Pi kurulum ağını kapatıp seçilen ağa geçer. Bağlanamazsa kurulum ağını aynı şifreyle yeniden açar ve nedenini ekranda yazar (şifre yanlış, ağ bulunamadı, ağ adres vermedi). Zero 2 W yalnızca 2,4 GHz ağlara bağlanabilir.
+
+WiFi'yi NetworkManager (`nmcli`) yönetir; `install.sh` sunucuya yalnızca `nmcli` için şifresiz `sudo` izni verir (`/etc/sudoers.d/splitflat-nmcli`). Kurulum isteği yalnızca kurulum ağındaki cihazlardan ve yalnızca kurulum modundayken kabul edilir.
+
 **Güncelleme:**
 
 ```bash

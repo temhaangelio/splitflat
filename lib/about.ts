@@ -22,6 +22,7 @@ export const ABOUT: Record<Lang, AboutContent> = {
         body: [
           "Pano evinizdeki bir Raspberry Pi'de çalışır ve ona bağlı ekranda görünür. Eşleşmiş bir telefon yoksa ekranda bir kod belirir.",
           "Kodu, panoyla aynı WiFi ağındaki telefonunuzun kamerasıyla okutun. Telefonda panonun kumandası açılır ve ekrandaki kod kaybolur; eşleşme bir kez yapılır, telefon hatırlanır.",
+          "Pano internete bağlanamazsa kendi kurulum ağını açar ve ekranda iki kod gösterir: biriyle telefonunuz o ağa bağlanır, diğeriyle evinizin WiFi ağını seçersiniz.",
           "Bundan sonra her şey telefondan: ekranda düğme ya da ayar yoktur, yalnızca gösterir. Telefon panoya yalnızca ev ağındayken ulaşır. Pano açılışta ve ekrana dokununca kodu kısa süre yeniden gösterir; yeni bir telefon eklemek ya da eşleşmesini kaybeden bir telefonu geri bağlamak için.",
         ],
       },
@@ -57,6 +58,7 @@ export const ABOUT: Record<Lang, AboutContent> = {
         body: [
           "The board runs on a Raspberry Pi in your home and shows on the screen attached to it. When no phone is paired, a code appears on the screen.",
           "Scan the code with the camera of a phone on the same WiFi network. The board's remote opens on your phone and the code disappears from the screen; you pair once and the phone is remembered.",
+          "If the board can't get online, it opens its own setup network and shows two codes: one connects your phone to it, the other lets you choose your home WiFi.",
           "From then on everything happens on the phone: the screen has no buttons or settings, it only displays. The phone reaches the board only while it is on your home network. The board shows the code briefly at start-up and when the screen is touched, to add a new phone or bring back one that lost its pairing.",
         ],
       },

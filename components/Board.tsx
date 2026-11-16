@@ -39,6 +39,7 @@ import {
 } from "@/lib/remote";
 import { setSound } from "@/lib/sound";
 import { fetchWeather, type Weather } from "@/lib/weather";
+import { readWifi, wifiQr, type WifiStatus } from "@/lib/wifi";
 
 // Pano yalnızca gösterir. Not eklemek, saat/hava durumu/geri sayımı açmak ve
 // diğer tüm ayarlar telefondan yapılır (bkz. components/Remote.tsx); pano
@@ -261,6 +262,9 @@ export default function Board() {
   const [qr, setQr] = useState<string | null>(null);
   // Kodun taşıdığı adres: Pi'nin ev ağındaki adresi (bkz. hostOrigin).
   const [origin, setOrigin] = useState<string | null>(null);
+  // İnternet kurulumu (Pi bir ağa bağlı değilse): durum ve iki kod.
+  const [wifi, setWifi] = useState<WifiStatus | null>(null);
+  const [wifiCodes, setWifiCodes] = useState<{ join: string; page: string } | null>(null);
   // Eşleşmiş panonun kodu şu kadar süre daha ekranda (0: gizli).
   const [peekMs, setPeekMs] = useState(0);
   const version = useRef(0); // sunucudaki son bilinen sürüm
@@ -400,6 +404,49 @@ export default function Board() {
   // kodu kısa süreliğine açılmış olan.
   const peeking = remote !== null && peekMs > 0;
   const codePair = pending ?? (peeking ? remote : null);
+
+  // İnternet kurulumunun durumu düzenli sorulur. Sunucu bu özelliği
+  // desteklemiyorsa (ör. geliştirme bilgisayarı) yanıt "unsupported" olur.
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      const w = await readWifi();
+      if (!alive) return;
+      setWifi(w);
+      // Kurulum sürerken sık, değilse seyrek sorulur.
+      const active = w?.mode === "setup" || w?.mode === "connecting" || w?.mode === "checking";
+      timer = setTimeout(tick, active ? 3000 : 15_000);
+    };
+    void tick();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // Kurulum ağı açılınca iki kod üretilir: ağa katılma ve kurulum sayfası.
+  const joinSsid = wifi?.setup?.ssid ?? "";
+  const joinPassword = wifi?.setup?.password ?? "";
+  const setupUrl = wifi?.setupUrl ?? "";
+  useEffect(() => {
+    if (!joinSsid || !joinPassword || !setupUrl) return;
+    let alive = true;
+    const opts = { margin: 2, width: 560, errorCorrectionLevel: "M" as const };
+    void import("qrcode")
+      .then((QR) =>
+        Promise.all([
+          QR.toDataURL(wifiQr(joinSsid, joinPassword), opts),
+          QR.toDataURL(setupUrl, opts),
+        ]),
+      )
+      .then(([join, page]) => {
+        if (alive) setWifiCodes({ join, page });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [joinSsid, joinPassword, setupUrl]);
 
   // Telefonun ulaşacağı adres bir kez öğrenilir.
   useEffect(() => {
@@ -642,6 +689,76 @@ export default function Board() {
                       : t.pairText}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* İnternet kurulumu: Pi bir ağa bağlı değil. Eşleştirme kodunun da üstünde durur. */}
+      {(wifi?.mode === "setup" || wifi?.mode === "connecting") && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-black p-[4vmin] text-ink">
+          <div className="flex w-full max-w-[1100px] flex-col items-center gap-[4vmin]">
+            <div className="text-center">
+              <p className="text-[clamp(.65rem,1.5vmin,.9rem)] font-semibold tracking-[.42em] text-muted">
+                {BRAND}
+              </p>
+              <h1 className="mt-[1.5vmin] text-[clamp(1.5rem,4.4vmin,2.8rem)] leading-tight font-bold tracking-wide">
+                {wifi.mode === "connecting" && wifi.ssid
+                  ? t.wifiConnecting(wifi.ssid)
+                  : t.wifiTitle}
+              </h1>
+              {wifi.mode === "connecting" ? (
+                <p className="mt-[1.5vmin] text-[clamp(.95rem,2.2vmin,1.3rem)] text-muted">
+                  {t.wifiConnectingHint}
+                </p>
+              ) : (
+                wifi.error && (
+                  <p
+                    role="alert"
+                    className="mt-[1.5vmin] text-[clamp(.95rem,2.2vmin,1.3rem)] text-ink"
+                  >
+                    {t.wifiErrors[wifi.error]}
+                  </p>
+                )
+              )}
+            </div>
+
+            {wifi.mode === "setup" && wifi.setup && (
+              <div className="flex flex-wrap items-start justify-center gap-[6vmin]">
+                {(
+                  [
+                    { n: 1, text: t.wifiStep1, img: wifiCodes?.join },
+                    { n: 2, text: t.wifiStep2, img: wifiCodes?.page },
+                  ] as const
+                ).map((step) => (
+                  <div key={step.n} className="flex w-[min(38vmin,340px)] flex-col items-center gap-[2vmin]">
+                    <p className="text-center text-[clamp(.9rem,2vmin,1.2rem)] leading-snug">
+                      <span className="mr-2 font-bold">{step.n}.</span>
+                      {step.text}
+                    </p>
+                    <div className="bg-white p-[1.2vmin]">
+                      {step.img ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- tarayıcıda üretilen veri adresi
+                        <img src={step.img} alt="" className="size-[min(34vmin,300px)]" />
+                      ) : (
+                        <div className="size-[min(34vmin,300px)]" />
+                      )}
+                    </div>
+                    {step.n === 1 ? (
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-3 text-[clamp(.85rem,1.8vmin,1.1rem)]">
+                        <dt className="text-muted">{t.wifiNetwork}</dt>
+                        <dd className="font-semibold">{wifi.setup?.ssid}</dd>
+                        <dt className="text-muted">{t.wifiPassword}</dt>
+                        <dd className="font-mono font-semibold tracking-wider">{wifi.setup?.password}</dd>
+                      </dl>
+                    ) : (
+                      <p className="font-mono text-[clamp(.85rem,1.8vmin,1.1rem)] text-muted">
+                        {wifi.setupUrl?.replace(/^http:\/\//, "")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

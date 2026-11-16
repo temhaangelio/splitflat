@@ -6,6 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 git pull --ff-only
+bash raspberry-pi/wifi-permission.sh
 sudo systemctl restart splitflat
 # Açılış görseli değiştiyse onu da uygula.
 bash raspberry-pi/splash.sh
